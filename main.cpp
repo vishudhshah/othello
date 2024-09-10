@@ -22,7 +22,7 @@ vector<vector<char>> board(BOARD_SIZE, vector<char>(BOARD_SIZE, EMPTY));
 // FUNCTION DECLARATIONS
 
 /**
- * Initialize the starting board configuration
+ * @brief Initialize the starting board configuration
  * 
  * @param board The 2D vector representing the board
  */
@@ -34,7 +34,7 @@ void initialize_board() {
 }
 
 /**
- * Print the board
+ * @brief Print the board
  */
 void print_board() {
     cout << "  ";
@@ -53,7 +53,7 @@ void print_board() {
 }
 
 /**
- * Calculate the scores of both players
+ * @brief Calculate the scores of both players
  * 
  * @return A pair of integers representing the scores of both players
  */
@@ -77,7 +77,7 @@ pair<int, int> calculate_scores() {
 }
 
 /**
- * Print the scores of both players
+ * @brief Print the scores of both players
  */
 void print_scores() {
     // Calculate the scores of both players
@@ -90,7 +90,7 @@ void print_scores() {
 }
 
 /**
- * Get user input for row and column
+ * @brief Get user input for row and column
  * 
  * @return A pair of integers representing the row and column
  */
@@ -102,7 +102,7 @@ pair<int, int> get_user_input() {
 }
 
 /**
- * Check if a move is valid
+ * @brief Check if a move is valid
  * 
  * @param row The row of the move
  * @param col The column of the move
@@ -144,7 +144,7 @@ bool is_valid_move(int row, int col, char player) {
 }
 
 /**
- * Print the board with valid moves highlighted
+ * @brief Print the board with valid moves highlighted
  * 
  * @param player The player for whom valid moves are highlighted
  */
@@ -176,7 +176,7 @@ void print_highlighted_board(char player) {
 }
 
 /**
- * Make a move on the board and flip the opponent's pieces
+ * @brief Make a move on the board and flip the opponent's pieces
  * 
  * @param row The row of the move
  * @param col The column of the move
@@ -216,7 +216,7 @@ void make_move(int row, int col, char player) {
 }
 
 /**
- * Check if the game is over
+ * @brief Check if the game is over
  * 
  * @return A boolean indicating if the game is over
  */
@@ -253,7 +253,7 @@ bool is_game_over() {
 }
 
 /**
- * Print the winning message
+ * @brief Print the winning message
  */
 void print_winning_message() {
     // Calculate how much did the player win by
@@ -273,7 +273,7 @@ void print_winning_message() {
 }
 
 /**
- * Check if the current player's turn should be skipped
+ * @brief Check if the current player's turn should be skipped
  * 
  * @param player The current player
  * @return A boolean indicating if the turn should be skipped
@@ -294,7 +294,7 @@ bool turn_skip(char player) {
 }
 
 /**
- * Switch the current player
+ * @brief Switch the current player
  * 
  * @param currentPlayer The variable storing the current player
  */
@@ -303,7 +303,7 @@ void switch_player(char &currentPlayer) {
 }
 
 /**
- * Static evaluation function for the current board state
+ * @brief Static evaluation function for the current board state
  * 
  * @return An integer representing the evaluation score
  */
@@ -328,7 +328,7 @@ int static_evaluation() {
 }
 
 /**
- * Evaluate the board state for the current player
+ * @brief Evaluate the board state for the current player
  * 
  * @param player The current player
  * @return An integer representing the evaluation score
@@ -354,7 +354,7 @@ int evaluate_board(char player) {
 }
 
 /**
- * Negamax algorithm with alpha-beta pruning
+ * @brief Negamax algorithm with alpha-beta pruning
  * 
  * @param depth The depth of the search tree
  * @param alpha The alpha value for alpha-beta pruning
@@ -404,7 +404,7 @@ int negamax(int depth, int alpha, int beta, char player) {
 }
 
 /**
- * Predict the best move for the current player
+ * @brief Predict the best move for the current player
  * 
  * @param player The current player
  * @return A pair of integers representing the row and column of the best move
@@ -444,7 +444,8 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
 }
 
 /**
- * Get the mode of the game from the user
+ * @brief Get the mode of the game from the user
+ * 
  * Mode 1: Player vs Player
  * Mode 2: Player vs AI
  * Mode 3: AI vs AI
@@ -471,7 +472,7 @@ int get_game_mode() {
 }
 
 /**
- * Get the depth of the search tree from the user
+ * @brief Get the depth of the search tree from the user
  * 
  * @return An integer representing the depth of the search tree
  */
@@ -498,7 +499,7 @@ int get_search_depth() {
 }
 
 /**
- * Get the disk color for the player from the user
+ * @brief Get the disk color for the player from the user
  * 
  * @return A character representing the disk color
  */
@@ -522,7 +523,7 @@ char get_disk_color() {
 // MAIN FUNCTION
 
 /**
- * Othello game
+ * @brief Othello game
  * 
  * @author Vishudh Shah
  * @since 2024-09-10
