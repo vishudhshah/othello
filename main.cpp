@@ -18,6 +18,18 @@ const int DEFAULT_DEPTH = 5;
 
 vector<vector<char>> board(BOARD_SIZE, vector<char>(BOARD_SIZE, EMPTY));
 
+// Weighted piece counter for the evaluation function
+const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
+    {100, -10, 20, 20, 20, 20, -10, 100},
+    {-10, -20,  1,  1,  1,  1, -20, -10},
+    {20,    1,  5,  5,  5,  5,   1,  20},
+    {20,    1,  5,  5,  5,  5,   1,  20},
+    {20,    1,  5,  5,  5,  5,   1,  20},
+    {20,    1,  5,  5,  5,  5,   1,  20},
+    {-10, -20,  1,  1,  1,  1, -20, -10},
+    {100, -20, 20, 20, 20, 20, -10, 100}
+};
+
 
 // FUNCTION DECLARATIONS
 
@@ -303,31 +315,6 @@ void switch_player(char &currentPlayer) {
 }
 
 /**
- * @brief Static evaluation function for the current board state
- * 
- * @return An integer representing the evaluation score
- */
-int static_evaluation() {
-    // Initialize counters for both scores
-    int player1_score = 0;
-    int player2_score = 0;
-
-    // Iterate through all cells in the board and count the number of pieces for each player
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] == PLAYER1) {
-                player1_score++;
-            } else if (board[i][j] == PLAYER2) {
-                player2_score++;
-            }
-        }
-    }
-
-    // Return the difference in scores for the current player
-    return player1_score - player2_score;
-}
-
-/**
  * @brief Evaluate the board state for the current player
  * 
  * @param player The current player
@@ -338,13 +325,13 @@ int evaluate_board(char player) {
     int player1_score = 0;
     int player2_score = 0;
 
-    // Iterate through all cells in the board and count the number of pieces for each player
+    // Iterate through all cells in the board and count the score for each player
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             if (board[i][j] == PLAYER1) {
-                player1_score++;
+                player1_score += POSITION_WEIGHTS[i][j];
             } else if (board[i][j] == PLAYER2) {
-                player2_score++;
+                player2_score += POSITION_WEIGHTS[i][j];
             }
         }
     }
@@ -511,7 +498,7 @@ char get_disk_color() {
     cin >> disk_color;
 
     // Validate the user input
-    while (disk_color != PLAYER1 || disk_color != PLAYER2) {
+    while (disk_color != PLAYER1 && disk_color != PLAYER2) {
         cout << "Please enter a valid disk color (B/W):" << endl;
         cin >> disk_color;
     }
@@ -533,8 +520,7 @@ int main() {
     int row, col;
     int depth = DEFAULT_DEPTH;
 
-    // Start with PLAYER1 (Black)
-    char current_player = PLAYER1;
+    char player_color; // Player's disk color in Player vs AI mode
 
     // Get the game mode from the user
     int game_mode = get_game_mode();
@@ -545,10 +531,13 @@ int main() {
 
         // If the game mode is Player vs AI, get the disk color for the player from the user
         if (game_mode == 2) {
-            char disk_color = get_disk_color();
-            current_player = disk_color;
+            player_color = get_disk_color();
         }
     }
+    cout << "player_color: " << player_color << endl;
+
+    // Start with PLAYER1 (Black)
+    char current_player = PLAYER1;
 
     // Initialize and print the starting board
     initialize_board();
@@ -574,7 +563,7 @@ int main() {
         cout << "Player " << current_player << "'s turn." << endl;
 
         // Handle different game modes
-        if (game_mode == 1 || (game_mode == 2 && current_player == PLAYER1)) {
+        if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
             // Player vs Player or Player vs AI (Player's turn)
             user_input = get_user_input();
             row = user_input.first;
