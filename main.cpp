@@ -534,7 +534,6 @@ int main() {
             player_color = get_disk_color();
         }
     }
-    cout << "player_color: " << player_color << endl;
 
     // Start with PLAYER1 (Black)
     char current_player = PLAYER1;
