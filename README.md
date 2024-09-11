@@ -2,6 +2,8 @@
 
 Othello game coded in C++. Can play against an 'AI'.
 
+- To play the game, run the "main" executable file.
+
 3 game modes:
 1. Player vs Player
 2. Player vs AI
