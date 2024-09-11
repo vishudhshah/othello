@@ -2,7 +2,7 @@
 
 Othello game coded in C++. Can play against an 'AI'.
 
-- To play the game, run the "main" executable file.
+- To play the game, run the `main` executable file.
 
 3 game modes:
 1. Player vs Player
@@ -10,7 +10,7 @@ Othello game coded in C++. Can play against an 'AI'.
 3. AI vs AI
 
 Options:
-- Search depth for AI can be set to any natural number, default = 5.
+- Search depth for AI can be set to any natural number, **default = 5**.
 - In game mode 2 (PvE) the player can choose their disk color.
 
 Notes on 'AI':
