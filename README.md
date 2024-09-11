@@ -16,5 +16,4 @@ Options:
 Notes on 'AI':
 - Negamax algorithm used with alpha-beta pruning for efficiency.
 - Evaluation function currently considers:
-  - Each side's score, weighted by a static map.
-  - Mobility (number of avaiable moves).
+  - Each side's score, weighted by a dynamic map.
