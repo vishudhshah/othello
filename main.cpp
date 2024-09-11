@@ -31,6 +31,18 @@ const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
     {100, -10, 20, 20, 20, 20, -10, 100}
 };
 
+// Weighted piece counter for endgame
+const int ENDGAME_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
+    {100,   5, 10, 10, 10, 10,   5, 100},
+    {  5,  -5,  1,  1,  1,  1,  -5,   5},
+    { 10,   1,  1,  1,  1,  1,   1,  10},
+    { 10,   1,  1,  1,  1,  1,   1,  10},
+    { 10,   1,  1,  1,  1,  1,   1,  10},
+    { 10,   1,  1,  1,  1,  1,   1,  10},
+    {  5,  -5,  1,  1,  1,  1,  -5,   5},
+    {100,   5, 10, 10, 10, 10,   5, 100}
+};
+
 
 // FUNCTION DECLARATIONS
 
@@ -316,6 +328,42 @@ void switch_player(char &currentPlayer) {
 }
 
 /**
+ * @brief Determine the current game phase
+ * 
+ * Possible game phases:
+ * 1. Opening: 0-20 pieces
+ * 2. Midgame: 20-40 pieces
+ * 3. Endgame: 40-64 pieces
+ * 
+ * @return An integer representing the current game phase
+ */
+int game_phase() {
+    // Initialize a counter for the total number of pieces on the board
+    int total_pieces = 0;
+
+    // Iterate through all cells in the board and count the number of pieces on the board
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j] == PLAYER1 || board[i][j] == PLAYER2) {
+                total_pieces++;
+            }
+        }
+    }
+
+    // Determine the game phase based on the total number of pieces
+    switch (total_pieces) {
+        case 0 ... 20:
+            return 1;
+        case 21 ... 40:
+            return 2;
+        case 41 ... 64:
+            return 3;
+        default:
+            return 0;
+    }
+}
+
+/**
  * @brief Evaluate the board state for the current player
  * 
  * @param player The current player
@@ -327,6 +375,9 @@ int evaluate_board(char player) {
     int player2_score = 0;
     int num_valid_moves = 0;
 
+    // Determine the game phase
+    int phase = game_phase();
+
     // Iterate through all cells in the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
@@ -335,11 +386,41 @@ int evaluate_board(char player) {
                 num_valid_moves++;
             }
 
-            // Calculate the score for each player based on the position weights
+            // Calculate the score for each player based on the position weights and game phase
             if (board[i][j] == PLAYER1) {
-                player1_score += POSITION_WEIGHTS[i][j];
+                switch (phase) {
+                    case 1:
+                        player1_score += POSITION_WEIGHTS[i][j];
+                        player2_score -= POSITION_WEIGHTS[i][j];
+                        break;
+                    case 2:
+                        player1_score += POSITION_WEIGHTS[i][j];
+                        player2_score -= POSITION_WEIGHTS[i][j];
+                        break;
+                    case 3:
+                        player1_score += ENDGAME_WEIGHTS[i][j];
+                        player2_score -= ENDGAME_WEIGHTS[i][j];
+                        break;
+                    default:
+                        break;
+                }
             } else if (board[i][j] == PLAYER2) {
-                player2_score += POSITION_WEIGHTS[i][j];
+                switch (phase) {
+                    case 1:
+                        player2_score += POSITION_WEIGHTS[i][j];
+                        player1_score -= POSITION_WEIGHTS[i][j];
+                        break;
+                    case 2:
+                        player2_score += POSITION_WEIGHTS[i][j];
+                        player1_score -= POSITION_WEIGHTS[i][j];
+                        break;
+                    case 3:
+                        player2_score += ENDGAME_WEIGHTS[i][j];
+                        player1_score -= ENDGAME_WEIGHTS[i][j];
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }
