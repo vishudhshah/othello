@@ -391,15 +391,15 @@ int evaluate_board(char player) {
                 switch (phase) {
                     case 1:
                         player1_score += POSITION_WEIGHTS[i][j];
-                        player2_score -= POSITION_WEIGHTS[i][j];
+                        // player2_score -= POSITION_WEIGHTS[i][j];
                         break;
                     case 2:
                         player1_score += POSITION_WEIGHTS[i][j];
-                        player2_score -= POSITION_WEIGHTS[i][j];
+                        // player2_score -= POSITION_WEIGHTS[i][j];
                         break;
                     case 3:
                         player1_score += ENDGAME_WEIGHTS[i][j];
-                        player2_score -= ENDGAME_WEIGHTS[i][j];
+                        // player2_score -= ENDGAME_WEIGHTS[i][j];
                         break;
                     default:
                         break;
@@ -408,15 +408,12 @@ int evaluate_board(char player) {
                 switch (phase) {
                     case 1:
                         player2_score += POSITION_WEIGHTS[i][j];
-                        player1_score -= POSITION_WEIGHTS[i][j];
                         break;
                     case 2:
                         player2_score += POSITION_WEIGHTS[i][j];
-                        player1_score -= POSITION_WEIGHTS[i][j];
                         break;
                     case 3:
                         player2_score += ENDGAME_WEIGHTS[i][j];
-                        player1_score -= ENDGAME_WEIGHTS[i][j];
                         break;
                     default:
                         break;
@@ -426,7 +423,8 @@ int evaluate_board(char player) {
     }
 
     // Calculate the evaluation score for the current player
-    int evaluation_score = (player == PLAYER1) ? player1_score - player2_score + 5 * num_valid_moves : player2_score - player1_score + 5 * num_valid_moves;
+    // int evaluation_score = (player == PLAYER1) ? player1_score - player2_score + 5 * num_valid_moves : player2_score - player1_score + 5 * num_valid_moves;
+    int evaluation_score = (player == PLAYER1) ? player1_score - player2_score : player2_score - player1_score;
 
     // Return the evaluation score for the current player
     return evaluation_score;
