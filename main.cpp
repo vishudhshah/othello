@@ -426,7 +426,7 @@ int evaluate_board(char player) {
     }
 
     // Calculate the evaluation score for the current player
-    int evaluation_score = (player == PLAYER1) ? player1_score - player2_score + pow(num_valid_moves, 2) : player2_score - player1_score + pow(num_valid_moves, 2);
+    int evaluation_score = (player == PLAYER1) ? player1_score - player2_score + 5 * num_valid_moves : player2_score - player1_score + 5 * num_valid_moves;
 
     // Return the evaluation score for the current player
     return evaluation_score;
