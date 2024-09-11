@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <utility>
+#include <cmath>
 
 using namespace std;
 
@@ -22,12 +23,12 @@ vector<vector<char>> board(BOARD_SIZE, vector<char>(BOARD_SIZE, EMPTY));
 const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
     {100, -10, 20, 20, 20, 20, -10, 100},
     {-10, -20,  1,  1,  1,  1, -20, -10},
-    {20,    1,  5,  5,  5,  5,   1,  20},
-    {20,    1,  5,  5,  5,  5,   1,  20},
-    {20,    1,  5,  5,  5,  5,   1,  20},
-    {20,    1,  5,  5,  5,  5,   1,  20},
+    { 20,   1,  5,  5,  5,  5,   1,  20},
+    { 20,   1,  5,  5,  5,  5,   1,  20},
+    { 20,   1,  5,  5,  5,  5,   1,  20},
+    { 20,   1,  5,  5,  5,  5,   1,  20},
     {-10, -20,  1,  1,  1,  1, -20, -10},
-    {100, -20, 20, 20, 20, 20, -10, 100}
+    {100, -10, 20, 20, 20, 20, -10, 100}
 };
 
 
@@ -321,13 +322,20 @@ void switch_player(char &currentPlayer) {
  * @return An integer representing the evaluation score
  */
 int evaluate_board(char player) {
-    // Initialize counters for both scores
+    // Initialize counters
     int player1_score = 0;
     int player2_score = 0;
+    int num_valid_moves = 0;
 
-    // Iterate through all cells in the board and count the score for each player
+    // Iterate through all cells in the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
+            // Count the number of valid moves for the current player (for mobility)
+            if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
+                num_valid_moves++;
+            }
+
+            // Calculate the score for each player based on the position weights
             if (board[i][j] == PLAYER1) {
                 player1_score += POSITION_WEIGHTS[i][j];
             } else if (board[i][j] == PLAYER2) {
@@ -336,8 +344,11 @@ int evaluate_board(char player) {
         }
     }
 
-    // Return the difference in scores for the current player
-    return (player == PLAYER1) ? player1_score - player2_score : player2_score - player1_score;
+    // Calculate the evaluation score for the current player
+    int evaluation_score = (player == PLAYER1) ? player1_score - player2_score + pow(num_valid_moves, 2) : player2_score - player1_score + pow(num_valid_moves, 2);
+
+    // Return the evaluation score for the current player
+    return evaluation_score;
 }
 
 /**
