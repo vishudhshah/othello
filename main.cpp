@@ -43,6 +43,8 @@ const int ENDGAME_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
     {100,   5, 10, 10, 10, 10,   5, 100}
 };
 
+// Last 10 moves uses a uniform weight matrix (because at this point all you care about is material, not position)
+
 
 // FUNCTION DECLARATIONS
 
@@ -356,11 +358,23 @@ int game_phase() {
             return 1;
         case 21 ... 40:
             return 2;
-        case 41 ... 64:
+        case 41 ... 53:
             return 3;
+        case 54 ... 64:
+            return 4;
         default:
             return 0;
     }
+}
+
+/**
+ * @brief Get the opponent's disk color
+ * 
+ * @param player The current player
+ * @return The opposing player
+ */
+char get_opponent(char player) {
+    return (player == PLAYER1) ? PLAYER2 : PLAYER1;
 }
 
 /**
@@ -370,6 +384,8 @@ int game_phase() {
  * @return An integer representing the evaluation score
  */
 int evaluate_board(char player) {
+    char opponent = get_opponent(player);
+
     // Initialize counters
     int player1_score = 0;
     int player2_score = 0;
@@ -381,8 +397,8 @@ int evaluate_board(char player) {
     // Iterate through all cells in the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
-            // Count the number of valid moves for the current player (for mobility)
-            if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
+            // Count the number of valid moves for the opponent (for mobility)
+            if (board[i][j] == EMPTY && is_valid_move(i, j, opponent)) {
                 num_valid_moves++;
             }
 
@@ -401,6 +417,10 @@ int evaluate_board(char player) {
                         player1_score += ENDGAME_WEIGHTS[i][j];
                         // player2_score -= ENDGAME_WEIGHTS[i][j];
                         break;
+                    case 4:
+                        player1_score += 1;
+                        // player2_score -= 1;
+                        break;
                     default:
                         break;
                 }
@@ -415,6 +435,9 @@ int evaluate_board(char player) {
                     case 3:
                         player2_score += ENDGAME_WEIGHTS[i][j];
                         break;
+                    case 4:
+                        player2_score += 1;
+                        break;
                     default:
                         break;
                 }
@@ -423,7 +446,7 @@ int evaluate_board(char player) {
     }
 
     // Calculate the evaluation score for the current player
-    // int evaluation_score = (player == PLAYER1) ? player1_score - player2_score + 5 * num_valid_moves : player2_score - player1_score + 5 * num_valid_moves;
+    // int evaluation_score = (player == PLAYER1) ? player1_score - player2_score - 5 * num_valid_moves : player2_score - player1_score - 5 * num_valid_moves;
     int evaluation_score = (player == PLAYER1) ? player1_score - player2_score : player2_score - player1_score;
 
     // Return the evaluation score for the current player
@@ -440,6 +463,8 @@ int evaluate_board(char player) {
  * @return An integer representing the evaluation score
  */
 int negamax(int depth, int alpha, int beta, char player) {
+    char opponent = get_opponent(player);
+
     // Check if the maximum depth is reached or the game is over
     if (depth == 0 || is_game_over()) {
         return evaluate_board(player);
@@ -460,7 +485,7 @@ int negamax(int depth, int alpha, int beta, char player) {
                 make_move(i, j, player);
 
                 // Recursively update the score by calling negamax for the opponent
-                int score = -negamax(depth - 1, -beta, -alpha, (player == PLAYER1) ? PLAYER2 : PLAYER1);
+                int score = -negamax(depth - 1, -beta, -alpha, opponent);
 
                 // Undo the move
                 board = board_copy;
@@ -487,6 +512,8 @@ int negamax(int depth, int alpha, int beta, char player) {
  * @return A pair of integers representing the row and column of the best move
  */
 pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
+    char opponent = get_opponent(player);
+
     // Initialize the best move and best score
     pair<int, int> best_move;
     int best_score = INT_MIN;
@@ -503,7 +530,7 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
                 make_move(i, j, player);
 
                 // Call negamax to predict the score
-                int score = -negamax(depth, INT_MIN, INT_MAX, (player == PLAYER1) ? PLAYER2 : PLAYER1);
+                int score = -negamax(depth, INT_MIN, INT_MAX, opponent);
 
                 // Undo the move
                 board = board_copy;

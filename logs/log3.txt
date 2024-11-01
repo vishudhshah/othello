@@ -1,0 +1,815 @@
+See 2nd last position with 2 moves remaining, Black's (AI's) turn. (1,6) was the winning move but it played (0,6).
+
+---
+
+/Users/saurin/Documents/Coding\ Projects/othello/main ; exit;                                       
+(base) saurin@Vishudhs-MacBook-Pro ~ % /Users/saurin/Documents/Coding\ Projects/othello/main ; exit;
+Enter the mode of the game:
+1. Player vs Player
+2. Player vs AI
+3. AI vs AI
+2
+Enter the depth of the search tree:
+If you would like to use the default search depth (5), enter 0.
+0
+Enter the disk color for the player (B/W):
+W
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . . . . . . . . 
+2 . . . _ . . . . 
+3 . . _ W B . . . 
+4 . . . B W _ . . 
+5 . . . . _ . . . 
+6 . . . . . . . . 
+7 . . . . . . . . 
+B: 2, W: 2
+Player B's turn.
+AI plays: 2, 3
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . . . . . . . . 
+2 . . _ B _ . . . 
+3 . . . B B . . . 
+4 . . _ B W . . . 
+5 . . . . . . . . 
+6 . . . . . . . . 
+7 . . . . . . . . 
+B: 4, W: 1
+Player W's turn.
+Enter a row, then enter a column:
+2
+2
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . . . . . . . . 
+2 . _ W B . . . . 
+3 . . _ W B . . . 
+4 . . . B W _ . . 
+5 . . . . _ . . . 
+6 . . . . . . . . 
+7 . . . . . . . . 
+B: 3, W: 3
+Player B's turn.
+AI plays: 2, 1
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . _ . _ . . . . 
+2 . B B B _ . . . 
+3 . . . W B _ . . 
+4 . . _ B W . . . 
+5 . . . _ . . . . 
+6 . . . . . . . . 
+7 . . . . . . . . 
+B: 5, W: 2
+Player W's turn.
+Enter a row, then enter a column:
+5
+3
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . . . . . . . . 
+2 . B B B . . . . 
+3 . . _ W B . . . 
+4 . . . W W . . . 
+5 . . _ W _ _ . . 
+6 . . . _ . . . . 
+7 . . . . . . . . 
+B: 4, W: 4
+Player B's turn.
+AI plays: 6, 3
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . _ . . . . . . 
+2 . B B B _ . . . 
+3 . . . B B . . . 
+4 . . _ B W . . . 
+5 . . . B . . . . 
+6 . . _ B . . . . 
+7 . . . . . . . . 
+B: 8, W: 1
+Player W's turn.
+Enter a row, then enter a column:
+2
+4
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . . . . . _ . . 
+2 . B B B W _ . . 
+3 . . . B W _ . . 
+4 . . . B W _ . . 
+5 . . . B . _ . . 
+6 . . . B . . . . 
+7 . . . . . . . . 
+B: 7, W: 3
+Player B's turn.
+AI plays: 2, 5
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . _ . . _ . . . 
+2 . B B B B B . . 
+3 . . . B B . . . 
+4 . . _ B W . . . 
+5 . . . B . . . . 
+6 . . _ B . . . . 
+7 . . . . . . . . 
+B: 10, W: 1
+Player W's turn.
+Enter a row, then enter a column:
+1
+4
+  0 1 2 3 4 5 6 7 
+0 . . . _ . _ . . 
+1 . . . . W _ . . 
+2 . B B B W B . . 
+3 . . . B W _ . . 
+4 . . . B W _ . . 
+5 . . . B . _ . . 
+6 . . . B . . . . 
+7 . . . . . . . . 
+B: 8, W: 4
+Player B's turn.
+AI plays: 5, 5
+  0 1 2 3 4 5 6 7 
+0 . . . . . . . . 
+1 . . _ . W . _ . 
+2 _ B B B W B _ . 
+3 . . _ B W . _ . 
+4 . . _ B B . . . 
+5 . . _ B _ B . . 
+6 . . . B . . . . 
+7 . . . . . . . . 
+B: 10, W: 3
+Player W's turn.
+Enter a row, then enter a column:
+2
+0
+  0 1 2 3 4 5 6 7 
+0 . . . _ _ . . . 
+1 . _ . _ W _ . . 
+2 W W W W W B . . 
+3 . . . B W _ . . 
+4 . . . B B . . . 
+5 . . . B . B . . 
+6 . . . B . . . . 
+7 . . . . . . . . 
+B: 7, W: 7
+Player B's turn.
+AI plays: 0, 3
+  0 1 2 3 4 5 6 7 
+0 . . . B _ _ . . 
+1 . . . . B . _ . 
+2 W W W W W B _ . 
+3 . . _ B W . . . 
+4 . . _ B B . . . 
+5 . . _ B _ B . . 
+6 . . . B . . _ . 
+7 . . . _ . . . . 
+B: 9, W: 6
+Player W's turn.
+Enter a row, then enter a column:
+0
+5
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W . . 
+1 . _ . _ W _ . . 
+2 W W W W W B . . 
+3 . . . B W _ . . 
+4 . . . B B . . . 
+5 . . . B . B . . 
+6 . . . B . . . . 
+7 . . . . . . . . 
+B: 8, W: 8
+Player B's turn.
+AI plays: 1, 3
+  0 1 2 3 4 5 6 7 
+0 . . _ B _ W . . 
+1 . . _ B W . _ . 
+2 W W W B W B _ . 
+3 . . _ B W . _ . 
+4 . . _ B B . . . 
+5 . . _ B _ B . . 
+6 . . . B . . _ . 
+7 . . . . . . . . 
+B: 10, W: 7
+Player W's turn.
+Enter a row, then enter a column:
+3
+2
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W . . 
+1 _ _ . B W _ . . 
+2 W W W W W B . . 
+3 . _ W W W _ . . 
+4 . . . B B . . . 
+5 . . . B . B . . 
+6 . . . B . . . . 
+7 . . . . . . . . 
+B: 8, W: 10
+Player B's turn.
+AI plays: 1, 5
+  0 1 2 3 4 5 6 7 
+0 . . _ B _ W _ . 
+1 . . . B B B _ . 
+2 W W W W W B _ . 
+3 . . W W W _ . . 
+4 . . . B B . . . 
+5 . . _ B _ B . . 
+6 . . . B . . _ . 
+7 . . . _ . . . . 
+B: 10, W: 9
+Player W's turn.
+Enter a row, then enter a column:
+5
+4
+  0 1 2 3 4 5 6 7 
+0 . . . B . W . . 
+1 . _ . B B B . . 
+2 W W W W W B . . 
+3 . _ W W W _ . . 
+4 . _ _ W W _ . . 
+5 . . _ B W B . . 
+6 . . . B _ . . . 
+7 . . . . . . . . 
+B: 8, W: 12
+Player B's turn.
+AI plays: 4, 2
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W . . 
+1 . . . B B B _ . 
+2 W W W W B B _ . 
+3 . . W B W _ . . 
+4 . _ B W W . . . 
+5 . . _ B W B _ . 
+6 . . _ B . . _ . 
+7 . . _ _ . . . . 
+B: 11, W: 10
+Player W's turn.
+Enter a row, then enter a column:
+5
+2
+  0 1 2 3 4 5 6 7 
+0 . . . B . W . . 
+1 . _ . B B B . . 
+2 W W W W B B . . 
+3 . _ W B W _ . . 
+4 . _ W W W _ . . 
+5 . _ W W W B . . 
+6 . _ . B _ . . . 
+7 . . . . . . . . 
+B: 9, W: 13
+Player B's turn.
+AI plays: 5, 1
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W . . 
+1 . . . B B B _ . 
+2 W W W W B B _ . 
+3 . . W B W _ . . 
+4 . _ B W W . . . 
+5 . B B B B B . . 
+6 . _ _ B _ _ _ . 
+7 . . . _ . . . . 
+B: 14, W: 9
+Player W's turn.
+Enter a row, then enter a column:
+7
+3
+  0 1 2 3 4 5 6 7 
+0 . . . B . W . . 
+1 _ _ _ B B B . . 
+2 W W W W B B . . 
+3 . _ W B W _ . . 
+4 . _ B W W _ . . 
+5 . B B W B B . . 
+6 . . . W _ . . . 
+7 . . _ W _ . . . 
+B: 12, W: 12
+Player B's turn.
+AI plays: 4, 5
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W . . 
+1 . . . B B B _ . 
+2 W W W W B B _ . 
+3 . _ W B W _ _ . 
+4 . _ B B B B . . 
+5 _ B B W B B _ . 
+6 . _ _ W _ _ _ . 
+7 . . . W . . . . 
+B: 15, W: 10
+Player W's turn.
+Enter a row, then enter a column:
+3
+5
+  0 1 2 3 4 5 6 7 
+0 . . . B . W _ . 
+1 _ _ _ B B W _ . 
+2 W W W W B W _ . 
+3 . _ W B W W _ . 
+4 . _ B B W B _ . 
+5 . B B W B B . . 
+6 . . . W _ . . . 
+7 . . _ W _ . . . 
+B: 12, W: 14
+Player B's turn.
+AI plays: 1, 2
+  0 1 2 3 4 5 6 7 
+0 . . _ B _ W . . 
+1 . _ B B B W . . 
+2 W W B B B W . . 
+3 . _ B B B W _ . 
+4 . _ B B W B _ . 
+5 _ B B W B B _ . 
+6 _ _ . W _ _ _ . 
+7 . . . W . . . . 
+B: 17, W: 10
+Player W's turn.
+Enter a row, then enter a column:
+5
+0
+  0 1 2 3 4 5 6 7 
+0 . . . B . W _ . 
+1 _ . B B B W _ . 
+2 W W B B B W _ . 
+3 _ . B B B W _ . 
+4 . . B B W B _ . 
+5 W W W W B B . . 
+6 _ _ _ W _ . . . 
+7 . . _ W . . . . 
+B: 15, W: 13
+Player B's turn.
+AI plays: 3, 6
+  0 1 2 3 4 5 6 7 
+0 . . _ B _ W . . 
+1 . _ B B B W _ . 
+2 W W B B B B _ _ 
+3 . _ B B B B B . 
+4 . _ B B W B _ . 
+5 W W W W B B _ . 
+6 . . . W _ _ _ . 
+7 . . . W . . . . 
+B: 18, W: 11
+Player W's turn.
+Enter a row, then enter a column:
+2
+7
+  0 1 2 3 4 5 6 7 
+0 . . . B . W _ . 
+1 _ . B B B W _ . 
+2 W W B B B B . W 
+3 _ . B B B B W _ 
+4 . . B B W W _ _ 
+5 W W W W W B _ . 
+6 _ _ _ W _ _ . . 
+7 . . . W . . . . 
+B: 15, W: 15
+Player B's turn.
+AI plays: 4, 7
+  0 1 2 3 4 5 6 7 
+0 . _ _ B _ W . . 
+1 . _ B B B W _ . 
+2 W W B B B B _ W 
+3 . _ B B B B B . 
+4 . _ B B W W . B 
+5 W W W W W B _ . 
+6 . . . W . _ _ . 
+7 . . . W . . . . 
+B: 17, W: 14
+Player W's turn.
+Enter a row, then enter a column:
+4
+1
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 . . B B W W _ . 
+2 W W B W B B . W 
+3 _ _ W B B B B . 
+4 . W W W W W . B 
+5 W W W W W B _ . 
+6 _ _ _ W _ . . . 
+7 . . _ W . . . . 
+B: 12, W: 20
+Player B's turn.
+AI plays: 6, 2
+  0 1 2 3 4 5 6 7 
+0 . _ . B . W . . 
+1 . _ B B W W _ . 
+2 W W B W B B _ W 
+3 . . B B B B B . 
+4 . W B W B W . B 
+5 W W B B W B _ . 
+6 . _ B W . _ . . 
+7 . . . W . . . . 
+B: 18, W: 15
+Player W's turn.
+Enter a row, then enter a column:
+2
+6
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 _ . B B W W _ _ 
+2 W W B W W W W W 
+3 _ . B B B B B . 
+4 _ W B W B W _ B 
+5 W W B B W B _ . 
+6 _ . B W _ _ . . 
+7 . . _ W _ . . . 
+B: 16, W: 18
+Player B's turn.
+AI plays: 6, 5
+  0 1 2 3 4 5 6 7 
+0 . _ _ B . W . . 
+1 . _ B B W W . . 
+2 W W B W W W W W 
+3 . . B B B B B . 
+4 . W B B B W _ B 
+5 W W B B B B _ . 
+6 . _ B W _ B . . 
+7 . _ . W . _ _ . 
+B: 19, W: 16
+Player W's turn.
+Enter a row, then enter a column:
+4
+6
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 _ . B B W W _ _ 
+2 W W B W W W W W 
+3 _ . B B B W W _ 
+4 _ W B B B W W B 
+5 W W B B B B _ _ 
+6 _ . B W _ B . . 
+7 . . _ W _ . . . 
+B: 17, W: 19
+Player B's turn.
+AI plays: 5, 7
+  0 1 2 3 4 5 6 7 
+0 . _ . B . W . . 
+1 . _ B B W W . . 
+2 W W B W B W W W 
+3 . _ B B B B W . 
+4 . W B B B W B B 
+5 W W B B B B _ B 
+6 . _ B W _ B . . 
+7 . _ . W . _ _ . 
+B: 21, W: 16
+Player W's turn.
+Enter a row, then enter a column:
+3
+1
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 _ . B B W W _ _ 
+2 W W B W B W W W 
+3 _ W W W W W W . 
+4 _ W B B B W B B 
+5 W W B B B B _ B 
+6 _ . B W _ B . . 
+7 . . _ W _ . . . 
+B: 17, W: 21
+Player B's turn.
+AI plays: 6, 4
+  0 1 2 3 4 5 6 7 
+0 . _ _ B _ W . . 
+1 . _ B B W W . . 
+2 W W B W B W W W 
+3 . W W W W W W _ 
+4 . W B B B W B B 
+5 W W B B B B _ B 
+6 . _ B B B B _ . 
+7 . _ _ W _ _ _ . 
+B: 19, W: 20
+Player W's turn.
+Enter a row, then enter a column:
+7
+4
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 _ . B B W W _ _ 
+2 W W B W B W W W 
+3 _ W W W W W W . 
+4 _ W B B W W B B 
+5 W W W B W B _ B 
+6 _ _ B W W B . . 
+7 . . . W W _ . . 
+B: 14, W: 26
+Player B's turn.
+AI plays: 7, 5
+  0 1 2 3 4 5 6 7 
+0 . _ _ B _ W . . 
+1 . _ B B W W . . 
+2 W W B W B W W W 
+3 . W W W W W W _ 
+4 . W B B W W B B 
+5 W W W B W B _ B 
+6 . _ B W B B _ . 
+7 . _ _ W W B _ . 
+B: 16, W: 25
+Player W's turn.
+Enter a row, then enter a column:
+7
+6
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 _ . B B W W _ _ 
+2 W W B W B W W W 
+3 _ W W W W W W . 
+4 _ W B B W W B B 
+5 W W W B W B _ B 
+6 _ _ B W B W _ . 
+7 . . . W W W W . 
+B: 14, W: 28
+Player B's turn.
+AI plays: 5, 6
+  0 1 2 3 4 5 6 7 
+0 . . _ B _ W . . 
+1 . _ B B W W . . 
+2 W W B B B W W W 
+3 . W W W B W W _ 
+4 . W B B W B B B 
+5 W W W B W B B B 
+6 . _ B W B W _ . 
+7 . _ _ W W W W . 
+B: 18, W: 25
+Player W's turn.
+Enter a row, then enter a column:
+3
+7
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 _ . B B W W _ _ 
+2 W W B B B W W W 
+3 _ W W W B W W W 
+4 _ W B B W B W B 
+5 W W W B W W B B 
+6 _ _ B W W W _ . 
+7 . . _ W W W W . 
+B: 15, W: 29
+Player B's turn.
+AI plays: 7, 2
+  0 1 2 3 4 5 6 7 
+0 . . _ B _ W . . 
+1 . _ B B W W . . 
+2 W W B B B W W W 
+3 . W W W B W W W 
+4 . W B B W B W B 
+5 W W W B B W B B 
+6 . _ B B W W _ _ 
+7 . _ B W W W W . 
+B: 18, W: 27
+Player W's turn.
+Enter a row, then enter a column:
+7
+1
+  0 1 2 3 4 5 6 7 
+0 . . . B _ W _ . 
+1 _ . B B W W _ _ 
+2 W W B B B W W W 
+3 _ W W W B W W W 
+4 _ W B B W B W B 
+5 W W W W B W B B 
+6 _ _ W B W W _ . 
+7 . W W W W W W . 
+B: 15, W: 31
+Player B's turn.
+AI plays: 1, 7
+  0 1 2 3 4 5 6 7 
+0 . . _ B _ W . . 
+1 . _ B B W W . B 
+2 W W B B B W W B 
+3 . W W W B W W B 
+4 . W B B W B W B 
+5 W W W W B W B B 
+6 . . W B W W _ . 
+7 . W W W W W W . 
+B: 18, W: 29
+Player W's turn.
+Enter a row, then enter a column:
+0
+2
+  0 1 2 3 4 5 6 7 
+0 . _ W B _ W _ . 
+1 _ . W W W W _ B 
+2 W W W B W W W B 
+3 _ W W W B W W B 
+4 _ W B B W B W B 
+5 W W W W B W B B 
+6 _ _ W B W W _ . 
+7 . W W W W W W . 
+B: 14, W: 34
+Player B's turn.
+AI plays: 0, 1
+  0 1 2 3 4 5 6 7 
+0 . B B B . W . . 
+1 . _ B W W W . B 
+2 W W W B W W W B 
+3 . W W W B W W B 
+4 . W B B W B W B 
+5 W W W W B W B B 
+6 . . W B W W _ . 
+7 . W W W W W W . 
+B: 17, W: 32
+Player W's turn.
+Enter a row, then enter a column:
+6
+6
+  0 1 2 3 4 5 6 7 
+0 . B B B _ W _ . 
+1 _ . B W W W _ B 
+2 W W W B W W W B 
+3 _ W W W B W W B 
+4 _ W B B W B W B 
+5 W W W W B W W B 
+6 _ _ W B W W W _ 
+7 . W W W W W W . 
+B: 16, W: 34
+Player B's turn.
+AI plays: 3, 0
+  0 1 2 3 4 5 6 7 
+0 . B B B . W . . 
+1 _ _ B W W W . B 
+2 W B W B W W W B 
+3 B B B B B W W B 
+4 _ B B B W B W B 
+5 W W B W B W W B 
+6 . _ W B W W W . 
+7 . W W W W W W . 
+B: 23, W: 28
+Player W's turn.
+Enter a row, then enter a column:
+4
+0
+  0 1 2 3 4 5 6 7 
+0 . B B B _ W _ . 
+1 . _ B W W W _ B 
+2 W B W B W W W B 
+3 W W B B B W W B 
+4 W W W W W B W B 
+5 W W B W B W W B 
+6 _ _ W B W W W _ 
+7 . W W W W W W _ 
+B: 18, W: 34
+Player B's turn.
+AI plays: 7, 7
+  0 1 2 3 4 5 6 7 
+0 . B B B . W . . 
+1 _ _ B W W W . B 
+2 W B W B W W W B 
+3 W W B B B W W B 
+4 W W W W B B W B 
+5 W W B W B B W B 
+6 . _ W B W W B _ 
+7 . W W W W W W B 
+B: 22, W: 31
+Player W's turn.
+Enter a row, then enter a column:
+6
+7
+  0 1 2 3 4 5 6 7 
+0 . B B B _ W _ . 
+1 . _ B W W W _ B 
+2 W B W B W W W B 
+3 W W B B B W W B 
+4 W W W W B B W B 
+5 W W B W B B W B 
+6 _ _ W B W W W W 
+7 _ W W W W W W B 
+B: 21, W: 33
+Player B's turn.
+AI plays: 7, 0
+  0 1 2 3 4 5 6 7 
+0 . B B B . W . _ 
+1 _ _ B W W W . B 
+2 W B W B W W W B 
+3 W W B B B W W B 
+4 W W W W B B W B 
+5 W W B W B B W B 
+6 . _ W B W W W W 
+7 B B B B B B B B 
+B: 28, W: 27
+Player W's turn.
+Enter a row, then enter a column:
+6
+1
+  0 1 2 3 4 5 6 7 
+0 . B B B _ W _ . 
+1 . _ B W W W _ B 
+2 W B W B W W W B 
+3 W W B B B W W B 
+4 W W W W B B W B 
+5 W W W W B B W B 
+6 _ W W B W W W W 
+7 B B B B B B B B 
+B: 27, W: 29
+Player B's turn.
+AI plays: 6, 0
+  0 1 2 3 4 5 6 7 
+0 . B B B . W . _ 
+1 _ _ B W W W . B 
+2 W B W B W W W B 
+3 W W B B B W W B 
+4 W W B W B B W B 
+5 W B W W B B W B 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 32, W: 25
+Player W's turn.
+Enter a row, then enter a column:
+0
+7
+  0 1 2 3 4 5 6 7 
+0 . B B B _ W _ W 
+1 _ _ B W W W _ W 
+2 W B W B W W W W 
+3 W W B B B W W W 
+4 W W B W B B W W 
+5 W B W W B B W W 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 27, W: 31
+Player B's turn.
+AI plays: 0, 4
+  0 1 2 3 4 5 6 7 
+0 _ B B B B W . W 
+1 _ _ B W B W . W 
+2 W B W B B W W W 
+3 W W B B B W W W 
+4 W W B W B B W W 
+5 W B W W B B W W 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 30, W: 29
+Player W's turn.
+Enter a row, then enter a column:
+0
+0
+  0 1 2 3 4 5 6 7 
+0 W W W W W W _ W 
+1 _ _ B W B W _ W 
+2 W B W B B W W W 
+3 W W B B B W W W 
+4 W W B W B B W W 
+5 W B W W B B W W 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 26, W: 34
+Player B's turn.
+AI plays: 1, 0
+  0 1 2 3 4 5 6 7 
+0 W W W W W W . W 
+1 B _ B W B W . W 
+2 B B W B B W W W 
+3 B W B B B W W W 
+4 B W B W B B W W 
+5 B B W W B B W W 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 31, W: 30
+Player W's turn.
+Enter a row, then enter a column:
+1
+1
+  0 1 2 3 4 5 6 7 
+0 W W W W W W _ W 
+1 B W W W B W _ W 
+2 B W W B B W W W 
+3 B W B B B W W W 
+4 B W B W B B W W 
+5 B B W W B B W W 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 29, W: 33
+Player B's turn.
+AI plays: 0, 6
+  0 1 2 3 4 5 6 7 
+0 W W W W W W B W 
+1 B W W W B B _ W 
+2 B W W B B W W W 
+3 B W B B B W W W 
+4 B W B W B B W W 
+5 B B W W B B W W 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 31, W: 32
+Player W's turn.
+Enter a row, then enter a column:
+1
+6
+  0 1 2 3 4 5 6 7 
+0 W W W W W W B W 
+1 B W W W W W W W 
+2 B W W B B W W W 
+3 B W B B B W W W 
+4 B W B W B B W W 
+5 B B W W B B W W 
+6 B B B B W W W W 
+7 B B B B B B B B 
+B: 29, W: 35
+Game Over. Player W won by 6 points!
+
+Saving session...
+...copying shared history...
+...saving history...truncating history files...
+...completed.
+
+[Process completed]
+
