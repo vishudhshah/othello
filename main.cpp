@@ -170,34 +170,6 @@ char get_opponent(char player) {
 }
 
 /**
- * @brief Get the mode of the game from the user
- * 
- * Mode 1: Player vs Player
- * Mode 2: Player vs AI
- * Mode 3: AI vs AI
- * 
- * @return An integer representing the mode of the game
- */
-int get_game_mode() {
-    int mode;
-
-    // Get the mode of the game from the user
-    cout << "Enter the mode of the game:" << endl;
-    cout << "1. Player vs Player" << endl;
-    cout << "2. Player vs AI" << endl;
-    cout << "3. AI vs AI" << endl;
-    cin >> mode;
-
-    // Validate the user input
-    while (mode < 1 || mode > 3) {
-        cout << "Please enter a valid game mode." << endl;
-        cin >> mode;
-    }
-
-    return mode;
-}
-
-/**
  * @brief Calculate the scores of both players
  * 
  * @return A pair of integers representing the scores of both players
@@ -598,6 +570,37 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
 }
 
 /**
+ * @brief Get the mode of the game from the user
+ * 
+ * Mode 1: Player vs Player
+ * Mode 2: Player vs AI
+ * Mode 3: AI vs AI
+ * 
+ * @return An integer representing the mode of the game
+ */
+int get_game_mode() {
+    int mode;
+
+    // Get the mode of the game from the user
+    cout << "Enter the mode of the game:" << endl;
+    cout << "1. Player vs Player" << endl;
+    cout << "2. Player vs AI" << endl;
+    cout << "3. AI vs AI" << endl;
+    cin >> mode;
+
+    // Validate the user input
+    while (cin.fail() || mode < 1 || mode > 3) {
+        cin.clear(); // Clear error flags
+        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore rest of the line
+        cout << "Please enter a valid game mode." << endl;
+        cin >> mode;
+    }
+    cout << endl;
+
+    return mode;
+}
+
+/**
  * @brief Get the depth of the search tree from the user
  * 
  * @return An integer representing the depth of the search tree
@@ -615,6 +618,7 @@ int get_search_depth() {
         cout << "Please enter a valid depth." << endl;
         cin >> depth;
     }
+    cout << endl;
 
     // Use the default search depth if the user entered 0
     if (depth == 0) {
@@ -641,6 +645,7 @@ char get_disk_color() {
         cout << "Please enter a valid disk color (B/W):" << endl;
         cin >> disk_color;
     }
+    cout << endl;
 
     return disk_color;
 }
@@ -680,6 +685,7 @@ int main() {
     // Initialize and print the starting board
     initialize_board();
     print_highlighted_board(current_player);
+    cout << endl;
 
     // Game loop
     for (;;) {
@@ -697,6 +703,11 @@ int main() {
             print_highlighted_board(current_player);
             continue;
         }
+
+        // Count and print the move number
+        static int move_number = 0;
+        move_number++;
+        cout << "Move " << move_number << endl;
 
         cout << "Player " << current_player << "'s turn." << endl;
 
@@ -736,6 +747,7 @@ int main() {
 
         // Print the board with valid moves highlighted for the next player
         print_highlighted_board(current_player);
+        cout << endl;
     }
 
     return 0;
