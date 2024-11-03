@@ -82,6 +82,122 @@ void print_board() {
 }
 
 /**
+ * @brief Get user input for row and column
+ * 
+ * Takes input in the format "A1" or "a1" and converts it to the corresponding row and column
+ * 
+ * @return A pair of integers representing the row and column
+ */
+pair<int, int> get_user_input() {
+    string user_input;
+    int row, col;
+
+    // Get user input
+    cout << "Enter your move (eg. A1 or a1): ";
+    cin >> user_input;
+
+    // Validate the user input
+    while (user_input.length() != 2 || user_input[0] < 'A' || user_input[0] > 'H' && user_input[0] < 'a' || user_input[0] > 'h' || user_input[1] < '1' || user_input[1] > '8') {
+        cout << "Please enter a valid move (eg. A1 or a1): ";
+        cin >> user_input;
+    }
+
+    // Convert the user input to row and column
+    row = user_input[1] - '1';
+    col = toupper(user_input[0]) - 'A';
+
+    return make_pair(row, col);
+
+}
+
+/**
+ * @brief Make a move on the board and flip the opponent's pieces
+ * 
+ * @param row The row of the move
+ * @param col The column of the move
+ * @param player The player making the move
+ */
+void make_move(int row, int col, char player) {
+    board[row][col] = player;
+
+    // Check for opponent pieces in all eight directions
+    int directions[8][2] = {{1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}};
+    for (int i = 0; i < 8; i++) {
+        int dx = directions[i][0];
+        int dy = directions[i][1];
+        int x = col + dx;
+        int y = row + dy;
+
+        // Check if there is an opponent piece in the current direction
+        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
+            // Move in the current direction until reaching the boundary or a player piece or an empty cell
+            while (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
+                x += dx;
+                y += dy;
+            }
+
+            // Flip all opponent pieces in the current direction, going backwards
+            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] == player) {
+                x -= dx;
+                y -= dy;
+                while (x != col || y != row) {
+                    board[y][x] = player;
+                    x -= dx;
+                    y -= dy;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief Switch the current player
+ * 
+ * @param currentPlayer The variable storing the current player
+ */
+void switch_player(char &currentPlayer) {
+    currentPlayer = (currentPlayer == PLAYER1) ? PLAYER2 : PLAYER1;
+}
+
+/**
+ * @brief Get the opponent's disk color
+ * 
+ * @param player The current player
+ * @return The opposing player
+ */
+char get_opponent(char player) {
+    return (player == PLAYER1) ? PLAYER2 : PLAYER1;
+}
+
+/**
+ * @brief Get the mode of the game from the user
+ * 
+ * Mode 1: Player vs Player
+ * Mode 2: Player vs AI
+ * Mode 3: AI vs AI
+ * 
+ * @return An integer representing the mode of the game
+ */
+int get_game_mode() {
+    int mode;
+
+    // Get the mode of the game from the user
+    cout << "Enter the mode of the game:" << endl;
+    cout << "1. Player vs Player" << endl;
+    cout << "2. Player vs AI" << endl;
+    cout << "3. AI vs AI" << endl;
+    cin >> mode;
+
+    // Validate the user input
+    while (mode < 1 || mode > 3) {
+        cout << "Please enter a valid game mode." << endl;
+        cin >> mode;
+    }
+
+    return mode;
+}
+
+/**
  * @brief Calculate the scores of both players
  * 
  * @return A pair of integers representing the scores of both players
@@ -116,6 +232,26 @@ void print_scores() {
 
     // Print the scores of both players
     cout << PLAYER1 << ": " << player1_score << ", " << PLAYER2 << ": " << player2_score << endl;
+}
+
+/**
+ * @brief Print the winning message
+ */
+void print_winning_message() {
+    // Calculate how much did the player win by
+    pair<int, int> scores = calculate_scores();
+    int player1_score = scores.first;
+    int player2_score = scores.second;
+    int winner_score = (player1_score > player2_score) ? player1_score : player2_score;
+    int loser_score = (player1_score < player2_score) ? player1_score : player2_score;
+    int score_difference = winner_score - loser_score;
+
+    cout << "Game Over.";
+    if (score_difference == 0) {
+        cout << " It's a tie!" << endl;
+    } else {
+        cout << " Player " << ((player1_score > player2_score) ? PLAYER1 : PLAYER2) << " won by " << score_difference << " points!" << endl;
+    }
 }
 
 /**
@@ -193,75 +329,6 @@ void print_highlighted_board(char player) {
 }
 
 /**
- * @brief Get user input for row and column
- * 
- * Takes input in the format "A1" or "a1" and converts it to the corresponding row and column
- * 
- * @return A pair of integers representing the row and column
- */
-pair<int, int> get_user_input() {
-    string user_input;
-    int row, col;
-
-    // Get user input
-    cout << "Enter your move (eg. A1 or a1): ";
-    cin >> user_input;
-
-    // Validate the user input
-    while (user_input.length() != 2 || user_input[0] < 'A' || user_input[0] > 'H' && user_input[0] < 'a' || user_input[0] > 'h' || user_input[1] < '1' || user_input[1] > '8') {
-        cout << "Please enter a valid move (eg. A1 or a1): ";
-        cin >> user_input;
-    }
-
-    // Convert the user input to row and column
-    row = user_input[1] - '1';
-    col = toupper(user_input[0]) - 'A';
-
-    return make_pair(row, col);
-
-}
-
-/**
- * @brief Make a move on the board and flip the opponent's pieces
- * 
- * @param row The row of the move
- * @param col The column of the move
- * @param player The player making the move
- */
-void make_move(int row, int col, char player) {
-    board[row][col] = player;
-
-    // Check for opponent pieces in all eight directions
-    int directions[8][2] = {{1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}};
-    for (int i = 0; i < 8; i++) {
-        int dx = directions[i][0];
-        int dy = directions[i][1];
-        int x = col + dx;
-        int y = row + dy;
-
-        // Check if there is an opponent piece in the current direction
-        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
-            // Move in the current direction until reaching the boundary or a player piece or an empty cell
-            while (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
-                x += dx;
-                y += dy;
-            }
-
-            // Flip all opponent pieces in the current direction, going backwards
-            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] == player) {
-                x -= dx;
-                y -= dy;
-                while (x != col || y != row) {
-                    board[y][x] = player;
-                    x -= dx;
-                    y -= dy;
-                }
-            }
-        }
-    }
-}
-
-/**
  * @brief Check if the game is over
  * 
  * @return A boolean indicating if the game is over
@@ -299,26 +366,6 @@ bool is_game_over() {
 }
 
 /**
- * @brief Print the winning message
- */
-void print_winning_message() {
-    // Calculate how much did the player win by
-    pair<int, int> scores = calculate_scores();
-    int player1_score = scores.first;
-    int player2_score = scores.second;
-    int winner_score = (player1_score > player2_score) ? player1_score : player2_score;
-    int loser_score = (player1_score < player2_score) ? player1_score : player2_score;
-    int score_difference = winner_score - loser_score;
-
-    cout << "Game Over.";
-    if (score_difference == 0) {
-        cout << " It's a tie!" << endl;
-    } else {
-        cout << " Player " << ((player1_score > player2_score) ? PLAYER1 : PLAYER2) << " won by " << score_difference << " points!" << endl;
-    }
-}
-
-/**
  * @brief Check if the current player's turn should be skipped
  * 
  * @param player The current player
@@ -339,14 +386,8 @@ bool turn_skip(char player) {
     return true;
 }
 
-/**
- * @brief Switch the current player
- * 
- * @param currentPlayer The variable storing the current player
- */
-void switch_player(char &currentPlayer) {
-    currentPlayer = (currentPlayer == PLAYER1) ? PLAYER2 : PLAYER1;
-}
+
+// AI FUNCTIONS
 
 /**
  * @brief Determine the current game phase
@@ -384,16 +425,6 @@ int game_phase() {
         default:
             return 0;
     }
-}
-
-/**
- * @brief Get the opponent's disk color
- * 
- * @param player The current player
- * @return The opposing player
- */
-char get_opponent(char player) {
-    return (player == PLAYER1) ? PLAYER2 : PLAYER1;
 }
 
 /**
@@ -567,34 +598,6 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
 }
 
 /**
- * @brief Get the mode of the game from the user
- * 
- * Mode 1: Player vs Player
- * Mode 2: Player vs AI
- * Mode 3: AI vs AI
- * 
- * @return An integer representing the mode of the game
- */
-int get_game_mode() {
-    int mode;
-
-    // Get the mode of the game from the user
-    cout << "Enter the mode of the game:" << endl;
-    cout << "1. Player vs Player" << endl;
-    cout << "2. Player vs AI" << endl;
-    cout << "3. AI vs AI" << endl;
-    cin >> mode;
-
-    // Validate the user input
-    while (mode < 1 || mode > 3) {
-        cout << "Please enter a valid game mode." << endl;
-        cin >> mode;
-    }
-
-    return mode;
-}
-
-/**
  * @brief Get the depth of the search tree from the user
  * 
  * @return An integer representing the depth of the search tree
@@ -649,7 +652,7 @@ char get_disk_color() {
  * @brief Othello game
  * 
  * @author Vishudh Shah
- * @since 2024-09-10
+ * @since 2024-06-26
  */
 int main() {
     pair<int, int> user_input;
