@@ -64,14 +64,16 @@ void initialize_board() {
  * @brief Print the board
  */
 void print_board() {
+    char column_labels[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'};
+
     cout << "  ";
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        cout << i << " ";
+    for (char label : column_labels) {
+        cout << label << " ";
     }
     cout << endl;
 
     for (int i = 0; i < BOARD_SIZE; i++) {
-        cout << i << " ";
+        cout << i + 1 << " ";
         for (int j = 0; j < BOARD_SIZE; j++) {
             cout << board[i][j] << " ";
         }
@@ -114,18 +116,6 @@ void print_scores() {
 
     // Print the scores of both players
     cout << PLAYER1 << ": " << player1_score << ", " << PLAYER2 << ": " << player2_score << endl;
-}
-
-/**
- * @brief Get user input for row and column
- * 
- * @return A pair of integers representing the row and column
- */
-pair<int, int> get_user_input() {
-    int row, col;
-    cout << "Enter a row, then enter a column:" << endl;
-    cin >> row >> col;
-    return make_pair(row, col);
 }
 
 /**
@@ -200,6 +190,35 @@ void print_highlighted_board(char player) {
     for (int i = 0; i < valid_moves.size(); i++) {
         board[valid_moves[i].first][valid_moves[i].second] = EMPTY;
     }
+}
+
+/**
+ * @brief Get user input for row and column
+ * 
+ * Takes input in the format "A1" or "a1" and converts it to the corresponding row and column
+ * 
+ * @return A pair of integers representing the row and column
+ */
+pair<int, int> get_user_input() {
+    string user_input;
+    int row, col;
+
+    // Get user input
+    cout << "Enter your move (eg. A1 or a1): ";
+    cin >> user_input;
+
+    // Validate the user input
+    while (user_input.length() != 2 || user_input[0] < 'A' || user_input[0] > 'H' && user_input[0] < 'a' || user_input[0] > 'h' || user_input[1] < '1' || user_input[1] > '8') {
+        cout << "Please enter a valid move (eg. A1 or a1): ";
+        cin >> user_input;
+    }
+
+    // Convert the user input to row and column
+    row = user_input[1] - '1';
+    col = toupper(user_input[0]) - 'A';
+
+    return make_pair(row, col);
+
 }
 
 /**
@@ -680,24 +699,30 @@ int main() {
 
         // Handle different game modes
         if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
-            // Player vs Player or Player vs AI (Player's turn)
+            // PvP or PvE (Player's turn)
             user_input = get_user_input();
             row = user_input.first;
             col = user_input.second;
 
             // Validate the user input
             while (!is_valid_move(row, col, current_player)) {
-                cout << "Please enter a valid move." << endl;
+                cout << "Please see the valid moves highlighted!" << endl;
                 user_input = get_user_input();
                 row = user_input.first;
                 col = user_input.second;
             }
+            cout << endl;
         } else {
             // AI's turn
             pair<int, int> ai_move = predict_move(current_player, depth);
             row = ai_move.first;
             col = ai_move.second;
-            cout << "AI plays: " << row << ", " << col << endl;
+
+            // Convert row and col to othello notation
+            char row_char = row + '1';
+            char col_char = col + 'A';
+            
+            cout << "AI plays: " << string(1, col_char) + row_char << endl << endl;
         }
 
         // Make the move
