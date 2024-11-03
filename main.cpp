@@ -365,9 +365,9 @@ bool turn_skip(char player) {
  * @brief Determine the current game phase
  * 
  * Possible game phases:
- * 1. Opening: 0-20 pieces
- * 2. Midgame: 20-40 pieces
- * 3. Endgame: 40-64 pieces
+ * 1. Opening: 4-20 pieces
+ * 2. Midgame: 21-50 pieces
+ * 3. Endgame: 51-64 pieces
  * 
  * @return An integer representing the current game phase
  */
@@ -386,9 +386,9 @@ int game_phase() {
 
     // Determine the game phase based on the total number of pieces
     switch (total_pieces) {
-        case 0 ... 20:
+        case 4 ... 20:
             return 1;
-        case 21 ... 40:
+        case 21 ... 50:
             return 2;
         case 51 ... 60:
             return 3;
