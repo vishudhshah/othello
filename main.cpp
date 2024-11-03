@@ -358,9 +358,9 @@ int game_phase() {
             return 1;
         case 21 ... 40:
             return 2;
-        case 41 ... 53:
+        case 51 ... 60:
             return 3;
-        case 54 ... 64:
+        case 61 ... 64:
             return 4;
         default:
             return 0;
