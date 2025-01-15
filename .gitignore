@@ -1,0 +1,5 @@
+.vscode
+logs
+main.dSYM
+.DS_Store
+TODO.md
