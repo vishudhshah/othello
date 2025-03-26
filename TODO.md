@@ -1,0 +1,5 @@
+- Puzzle mode: Input a board state and see if the AI can solve it.
+- In AI vs AI mode, allow different search depths.
+- Allow going back a move – keep a record of the board state before/after every move.
+- Display who is winning and by how much (using current and future eval score).
+- Implement reinforcement learning to improve AI.
