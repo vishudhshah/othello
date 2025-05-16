@@ -388,8 +388,6 @@ int game_phase() {
  * @return An integer representing the evaluation score
  */
 int evaluate_board(char player) {
-    char opponent = get_opponent(player);
-
     // Initialize counters
     int player1_score = 0;
     int player2_score = 0;
@@ -402,7 +400,7 @@ int evaluate_board(char player) {
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             // Count the number of valid moves for the opponent (for mobility)
-            if (board[i][j] == EMPTY && is_valid_move(i, j, opponent)) {
+            if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
                 num_valid_moves++;
             }
 
@@ -449,9 +447,11 @@ int evaluate_board(char player) {
         }
     }
 
-    // Calculate the evaluation score for the current player
-    // int evaluation_score = (player == PLAYER1) ? player1_score - player2_score - 5 * num_valid_moves : player2_score - player1_score - 5 * num_valid_moves;
-    int evaluation_score = (player == PLAYER1) ? player1_score - player2_score : player2_score - player1_score;
+    // Calculate the score for the current player based on the number of pieces
+    int player_score = (player == PLAYER1) ? player1_score - player2_score : player2_score - player1_score;
+
+    // Calculate the evaluation score for the current player, taking mobility into account
+    int evaluation_score = player_score + 10 * num_valid_moves;
 
     // Return the evaluation score for the current player
     return evaluation_score;
