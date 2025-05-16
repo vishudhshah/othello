@@ -1,9 +1,9 @@
 # Othello
 
-Othello game coded in C++. Can play against an 'AI'.
+Othello/Reversi game coded in C++. Can play against an 'AI'.
 
-- If you're here, I assume you already know how to play... If not, [here's a link](https://en.wikipedia.org/wiki/Reversi).
-- To play the game, run the `main.exe` executable file and follow the prompts.
+- Since you're here, I assume you already know how to play... If not, [here's a link](https://en.wikipedia.org/wiki/Reversi).
+- To play the game, run the `main` binary file and follow the prompts or build the cpp file yourself and then run the binary.
 
 ## Game modes
 1. Player vs Player
@@ -18,4 +18,4 @@ Othello game coded in C++. Can play against an 'AI'.
 - Negamax algorithm used with alpha-beta pruning for efficiency.
 - Evaluation function currently considers:
   - Each side's score, weighted by a dynamic map.
-  - Tried integrating piece mobility into evaluation function but failed...
+  - Piece mobility.
