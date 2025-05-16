@@ -306,35 +306,17 @@ void print_highlighted_board(char player) {
  * @return A boolean indicating if the game is over
  */
 bool is_game_over() {
-    // Assume all cells are filled
-    bool all_cells_filled = true;
-    // Assume no valid move exists
-    bool valid_move_exists = false;
-
-    // Iterate through all cells in the board
+    // If there's at least one empty cell with a valid move for either player, the game is not over
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
-            // If an empty cell is found, not all cells are filled (but no valid move exists yet)
-            if (board[i][j] == EMPTY) {
-                all_cells_filled = false;
-
-                // In an empty cell if there is a valid move for at least one player, the game is not over
-                if (is_valid_move(i, j, PLAYER1) || is_valid_move(i, j, PLAYER2)) {
-                    return false;
-                    // valid_moves_exist = true;
-                }
+            if (board[i][j] == EMPTY && (is_valid_move(i, j, PLAYER1) || is_valid_move(i, j, PLAYER2))) {
+                return false;
             }
         }
     }
 
-    // If all cells are filled or no valid move exists, the game is over
-    if (all_cells_filled) {
-        return true;
-    } else if (!valid_move_exists) {
-        return true;
-    } else {
-        return false;
-    }
+    // If all cells are filled or no valid move exists for either player, the game is over
+    return true;
 }
 
 /**
