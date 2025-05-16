@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <cmath>
+#include <format>
 
 using namespace std;
 
@@ -43,7 +44,7 @@ const int ENDGAME_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
     {100,   5, 10, 10, 10, 10,   5, 100}
 };
 
-// Last 10 moves uses a uniform weight matrix (because at this point all you care about is material, not position)
+// Last few moves uses a uniform weight matrix (because at this point all you care about is material, not position)
 
 
 // FUNCTION DECLARATIONS
@@ -68,16 +69,16 @@ void print_board() {
 
     cout << "  ";
     for (char label : column_labels) {
-        cout << label << " ";
+        cout << label << ' ';
     }
-    cout << endl;
+    cout << '\n';
 
     for (int i = 0; i < BOARD_SIZE; i++) {
-        cout << i + 1 << " ";
+        cout << i + 1 << ' ';
         for (int j = 0; j < BOARD_SIZE; j++) {
-            cout << board[i][j] << " ";
+            cout << board[i][j] << ' ';
         }
-        cout << endl;
+        cout << '\n';
     }
 }
 
@@ -203,7 +204,7 @@ void print_scores() {
     int player2_score = scores.second;
 
     // Print the scores of both players
-    cout << PLAYER1 << ": " << player1_score << ", " << PLAYER2 << ": " << player2_score << endl;
+    cout << format("{}: {}, {}: {}\n", PLAYER1, player1_score, PLAYER2, player2_score);
 }
 
 /**
@@ -220,9 +221,11 @@ void print_winning_message() {
 
     cout << "Game Over.";
     if (score_difference == 0) {
-        cout << " It's a tie!" << endl;
+        cout << " It's a tie!\n";
     } else {
-        cout << " Player " << ((player1_score > player2_score) ? PLAYER1 : PLAYER2) << " won by " << score_difference << " points!" << endl;
+        cout << format(" Player {} won by {} points!\n", 
+            (player1_score > player2_score ? PLAYER1 : PLAYER2), 
+            score_difference);
     }
 }
 
@@ -563,6 +566,7 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
         }
     }
 
+    cout << format("Best score for {}: {}\n", player, best_score);  // for debugging, tells who is winning?
     return best_move;
 }
 
@@ -579,20 +583,20 @@ int get_game_mode() {
     int mode;
 
     // Get the mode of the game from the user
-    cout << "Enter the mode of the game:" << endl;
-    cout << "1. Player vs Player" << endl;
-    cout << "2. Player vs AI" << endl;
-    cout << "3. AI vs AI" << endl;
+    cout << "Enter the mode of the game:\n"
+        << "1. Player vs Player\n"
+        << "2. Player vs AI\n"
+        << "3. AI vs AI\n";
     cin >> mode;
 
     // Validate the user input
     while (cin.fail() || mode < 1 || mode > 3) {
         cin.clear(); // Clear error flags
         cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore rest of the line
-        cout << "Please enter a valid game mode." << endl;
+        cout << "Please enter a valid game mode.\n";
         cin >> mode;
     }
-    cout << endl;
+    cout << '\n';
 
     return mode;
 }
@@ -606,16 +610,16 @@ int get_search_depth() {
     int depth;
 
     // Get the depth of the search tree from the user
-    cout << "Enter the depth of the search tree:" << endl;
-    cout << "If you would like to use the default search depth (" << DEFAULT_DEPTH << "), enter 0." << endl;
+    cout << "Enter the depth of the search tree:\n";
+    cout << format("If you would like to use the default search depth ({}), enter 0.\n", DEFAULT_DEPTH);
     cin >> depth;
 
     // Validate the user input
     while (depth < 0) {
-        cout << "Please enter a valid depth." << endl;
+        cout << "Please enter a valid depth.\n";
         cin >> depth;
     }
-    cout << endl;
+    cout << '\n';
 
     // Use the default search depth if the user entered 0
     if (depth == 0) {
@@ -634,15 +638,15 @@ char get_disk_color() {
     char disk_color;
 
     // Get the disk color for the player from the user
-    cout << "Enter the disk color for the player (B/W):" << endl;
+    cout << "Enter the disk color for the player (B/W):\n";
     cin >> disk_color;
 
     // Validate the user input
     while (disk_color != PLAYER1 && disk_color != PLAYER2) {
-        cout << "Please enter a valid disk color (B/W):" << endl;
+        cout << "Please enter a valid disk color (B/W):\n";
         cin >> disk_color;
     }
-    cout << endl;
+    cout << '\n';
 
     return disk_color;
 }
@@ -682,7 +686,7 @@ int main() {
     // Initialize and print the starting board
     initialize_board();
     print_highlighted_board(current_player);
-    cout << endl;
+    cout << '\n';
 
     // Game loop
     for (;;) {
@@ -695,7 +699,7 @@ int main() {
 
         // Check if the current player's turn should be skipped
         if (turn_skip(current_player)) {
-            cout << "Player " << current_player << "'s turn is skipped!" << endl;
+            cout << format("Player {}'s turn is skipped!\n", current_player);
             switch_player(current_player);
             print_highlighted_board(current_player);
             continue;
@@ -704,9 +708,9 @@ int main() {
         // Count and print the move number
         static int move_number = 0;
         move_number++;
-        cout << "Move " << move_number << endl;
+        cout << format("Move {}\n", move_number);
 
-        cout << "Player " << current_player << "'s turn." << endl;
+        cout << format("Player {}'s turn.\n", current_player);
 
         // Handle different game modes
         if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
@@ -717,12 +721,12 @@ int main() {
 
             // Validate the user input
             while (!is_valid_move(row, col, current_player)) {
-                cout << "Please see the valid moves highlighted!" << endl;
+                cout << "Please see the valid moves highlighted!\n";
                 user_input = get_user_input();
                 row = user_input.first;
                 col = user_input.second;
             }
-            cout << endl;
+            cout << '\n';
         } else {
             // AI's turn
             pair<int, int> ai_move = predict_move(current_player, depth);
@@ -733,7 +737,7 @@ int main() {
             char row_char = row + '1';
             char col_char = col + 'A';
             
-            cout << "AI plays: " << string(1, col_char) + row_char << endl << endl;
+            cout << format("AI plays: {}{}\n\n", col_char, row_char);
         }
 
         // Make the move
@@ -744,7 +748,7 @@ int main() {
 
         // Print the board with valid moves highlighted for the next player
         print_highlighted_board(current_player);
-        cout << endl;
+        cout << '\n';
     }
 
     return 0;
