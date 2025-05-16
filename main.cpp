@@ -469,7 +469,7 @@ int evaluate_board(char player) {
 int negamax(int depth, int alpha, int beta, char player) {
     char opponent = get_opponent(player);
 
-    // Check if the maximum depth is reached or the game is over
+    // Base case: game is over or depth limit reached
     if (depth == 0 || is_game_over()) {
         return evaluate_board(player);
     }
@@ -504,6 +504,21 @@ int negamax(int depth, int alpha, int beta, char player) {
                 }
             }
         }
+    }
+
+    // If no valid move was found for current player
+    if (best_score == INT_MIN) {
+        // Check if opponent also has no valid moves
+        for (int i = 0; i < BOARD_SIZE; ++i) {
+            for (int j = 0; j < BOARD_SIZE; ++j) {
+                if (is_valid_move(i, j, opponent)) {
+                    // Pass turn to opponent
+                    return -negamax(depth - 1, -beta, -alpha, opponent);
+                }
+            }
+        }
+        // Neither player has valid moves: game over (maybe redundant because is_game_over check at start?)
+        return evaluate_board(player);
     }
 
     return best_score;
