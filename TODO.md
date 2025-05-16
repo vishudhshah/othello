@@ -1,5 +1,18 @@
-- Puzzle mode: Input a board state and see if the AI can solve it.
+**Features**
+- Puzzle mode: Input a board state (as FEN?) and see if the AI can solve it.
 - In AI vs AI mode, allow different search depths.
 - Allow going back a move – keep a record of the board state before/after every move.
 - Display who is winning and by how much (using current and future eval score).
+- GUI.
+- Exporting games as PGN.
+
+**Improvements**
+- Add move ordering to improve alpha-beta pruning efficiency (e.g. try corners, sides first).
+- Implement variable lookahead depth based on moves left.
+- Use OOP - refactor the code to use classes for the board, pieces, and AI.
+- Implement stability into eval function: A disk is stable if it cannot be flipped (e.g. corner-connected lines).
+- Cache valid moves once per board state to avoid recomputation.
+
+- Look into iterative deepening to improve search time.
+- Alternative algorithms: NegaScout, MTD(f).
 - Implement reinforcement learning to improve AI – maybe port to python.
