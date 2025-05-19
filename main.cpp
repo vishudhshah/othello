@@ -3,7 +3,10 @@
 #include <iostream>
 #include <vector>
 #include <utility>
-#include <cmath>
+#include <string>
+#include <limits>
+#include <algorithm>
+#include <cctype>
 #include <format>
 
 using namespace std;
@@ -412,19 +415,15 @@ int evaluate_board(char player) {
                 switch (phase) {
                     case 1:
                         player1_score += POSITION_WEIGHTS[i][j];
-                        // player2_score -= POSITION_WEIGHTS[i][j];
                         break;
                     case 2:
                         player1_score += POSITION_WEIGHTS[i][j];
-                        // player2_score -= POSITION_WEIGHTS[i][j];
                         break;
                     case 3:
                         player1_score += ENDGAME_WEIGHTS[i][j];
-                        // player2_score -= ENDGAME_WEIGHTS[i][j];
                         break;
                     case 4:
                         player1_score += 1;
-                        // player2_score -= 1;
                         break;
                     default:
                         break;
@@ -450,14 +449,12 @@ int evaluate_board(char player) {
         }
     }
 
-    // Calculate the score for the current player based on the number of pieces
-    int player_score = (player == PLAYER1) ? player1_score - player2_score : player2_score - player1_score;
+    // Calculate the material score and mobility score for the current player
+    int material_score = player == PLAYER1 ? player1_score - player2_score : player2_score - player1_score;
+    int mobility_score = 10 * num_valid_moves;
 
-    // Calculate the evaluation score for the current player, taking mobility into account
-    int evaluation_score = player_score + 10 * num_valid_moves;
-
-    // Return the evaluation score for the current player
-    return evaluation_score;
+    // Return the final evaluation score for the current player
+    return material_score + mobility_score;
 }
 
 /**
@@ -478,17 +475,15 @@ int negamax(int depth, int alpha, int beta, char player) {
     }
 
     // Initialize the best score
-    int best_score = INT_MIN;
+    int best_score = numeric_limits<int>::min();
 
     // Iterate through all cells in the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             // Check if the move is valid
             if (is_valid_move(i, j, player)) {
-                // Make a copy of the board
+                // Make a copy of the board and simulate the move
                 vector<vector<char>> board_copy = board;
-
-                // Make the move
                 make_move(i, j, player);
 
                 // Recursively update the score by calling negamax for the opponent
@@ -503,25 +498,16 @@ int negamax(int depth, int alpha, int beta, char player) {
 
                 // Perform alpha-beta pruning
                 if (alpha >= beta) {
-                    break;
+                    goto prune_branch;
                 }
             }
         }
     }
+    prune_branch:;
 
-    // If no valid move was found for current player
-    if (best_score == INT_MIN) {
-        // Check if opponent also has no valid moves
-        for (int i = 0; i < BOARD_SIZE; ++i) {
-            for (int j = 0; j < BOARD_SIZE; ++j) {
-                if (is_valid_move(i, j, opponent)) {
-                    // Pass turn to opponent
-                    return -negamax(depth - 1, -beta, -alpha, opponent);
-                }
-            }
-        }
-        // Neither player has valid moves: game over (maybe redundant because is_game_over check at start?)
-        return evaluate_board(player);
+    // If no valid move was found for current player, then the turn is skipped (since we checked if game is over at the start)
+    if (best_score == numeric_limits<int>::min()) {
+        return -negamax(depth - 1, -beta, -alpha, opponent);
     }
 
     return best_score;
@@ -538,21 +524,19 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
 
     // Initialize the best move and best score
     pair<int, int> best_move;
-    int best_score = INT_MIN;
+    int best_score = numeric_limits<int>::min();
 
     // Iterate through all cells in the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             // Check if the move is valid
             if (is_valid_move(i, j, player)) {
-                // Make a copy of the board
+                // Make a copy of the board and simulate the move
                 vector<vector<char>> board_copy = board;
-                
-                // Make the move
                 make_move(i, j, player);
 
                 // Call negamax to predict the score
-                int score = -negamax(depth, INT_MIN, INT_MAX, opponent);
+                int score = -negamax(depth, numeric_limits<int>::min(), numeric_limits<int>::max(), opponent);
 
                 // Undo the move
                 board = board_copy;
@@ -622,11 +606,7 @@ int get_search_depth() {
     cout << '\n';
 
     // Use the default search depth if the user entered 0
-    if (depth == 0) {
-        depth = DEFAULT_DEPTH;
-    }
-
-    return depth;
+    return depth == 0 ? DEFAULT_DEPTH : depth;
 }
 
 /**
@@ -638,15 +618,18 @@ char get_disk_color() {
     char disk_color;
 
     // Get the disk color for the player from the user
-    cout << "Enter the disk color for the player (B/W):\n";
+    cout << "Enter the disk color for the player (B/b or W/w):\n";
     cin >> disk_color;
 
     // Validate the user input
-    while (disk_color != PLAYER1 && disk_color != PLAYER2) {
-        cout << "Please enter a valid disk color (B/W):\n";
+    while (disk_color != PLAYER1 && disk_color != PLAYER2 && disk_color != 'b' && disk_color != 'w') {
+        cout << "Please enter a valid disk color (B/b or W/w):\n";
         cin >> disk_color;
     }
     cout << '\n';
+
+    // Convert to uppercase
+    disk_color = toupper(disk_color);
 
     return disk_color;
 }
@@ -688,6 +671,9 @@ int main() {
     print_highlighted_board(current_player);
     cout << '\n';
 
+    // Initialize the move number
+    int move_number = 0;
+
     // Game loop
     for (;;) {
         // Check if the game is over
@@ -706,7 +692,6 @@ int main() {
         }
 
         // Count and print the move number
-        static int move_number = 0;
         move_number++;
         cout << format("Move {}\n", move_number);
 
