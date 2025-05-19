@@ -1,5 +1,5 @@
 .vscode
-main.dSYM
+*.dSYM
 .DS_Store
 logs
 __pycache__
