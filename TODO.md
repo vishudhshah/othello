@@ -7,7 +7,6 @@
 - Exporting games as PGN.
 
 **Improvements**
-- Add move ordering to improve alpha-beta pruning efficiency (e.g. try corners, sides first).
 - Implement variable lookahead depth based on moves left.
 - Use OOP - refactor the code to use classes for the board, pieces, and AI.
 - Implement stability into eval function: A disk is stable if it cannot be flipped (e.g. corner-connected lines).

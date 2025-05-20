@@ -538,6 +538,55 @@ int evaluate_board(char player) {
 }
 
 /**
+ * @brief Get and sort valid moves for a player to optimize alpha-beta pruning
+ * 
+ * @param player The current player
+ * @return A vector of pairs containing the row and column of valid moves, sorted by evaluation score
+ */
+vector<pair<int, int>> get_sorted_moves(char player) {
+    // Initialize a vector to store moves along with their eval scores
+    vector<pair<pair<int, int>, int>> moves_with_scores;
+
+    // Iterate through all spaces to find valid moves
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (is_valid_move(i, j, player)) {
+                // Create a copy of the board to simulate the move
+                vector<vector<char>> board_copy = board;
+                make_move(i, j, player);
+
+                // Evaluate the board state after the move
+                int score = evaluate_board(player);
+
+                // Restore the original board state
+                board = board_copy;
+
+                // Store the move and its score
+                moves_with_scores.emplace_back(pair<int, int> {i, j}, score);
+            }
+        }
+    }
+
+    // Sort moves in descending order based on their eval scores
+    sort(
+        moves_with_scores.begin(),
+        moves_with_scores.end(),
+        [] (const auto& a, const auto& b) {
+            return a.second > b.second;
+        }
+    );
+
+    // Extract sorted moves into a new vector
+    vector<pair<int, int>> sorted_moves;
+    sorted_moves.reserve(moves_with_scores.size()); // Reserve space for efficiency
+    for (const auto& move : moves_with_scores) {
+        sorted_moves.emplace_back(move.first);
+    }
+
+    return sorted_moves;
+}
+
+/**
  * @brief Negamax algorithm with alpha-beta pruning
  * 
  * @param depth The depth of the search tree
@@ -582,6 +631,40 @@ int negamax(int depth, int alpha, int beta, char player) {
     // Initialize the best score
     int best_score = numeric_limits<int>::min();
 
+    // Get the sorted valid moves for the current player
+    vector<pair<int, int>> sorted_moves = get_sorted_moves(player);
+
+    // If no valid moves were found, pass the turn to the opponent
+    if (sorted_moves.empty()) {
+        return -negamax(depth - 1, -beta, -alpha, opponent);
+    }
+
+    // Iterate through all sorted (valid) moves
+    for (const auto& move : sorted_moves) {
+        int i = move.first;
+        int j = move.second;
+
+        // Make a copy of the board and simulate the move
+        vector<vector<char>> board_copy = board;
+        make_move(i, j, player);
+
+        // Recursively update the score by calling negamax for the opponent
+        int score = -negamax(depth - 1, -beta, -alpha, opponent);
+
+        // Undo the move
+        board = board_copy;
+
+        // Update the best score
+        best_score = max(best_score, score);
+        alpha = max(alpha, score);
+
+        // Perform alpha-beta pruning
+        if (alpha >= beta) {
+            break;
+        }
+    }
+
+    /*
     // Iterate through all cells in the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
@@ -618,6 +701,7 @@ int negamax(int depth, int alpha, int beta, char player) {
     if (best_score == numeric_limits<int>::min()) {
         return -negamax(depth - 1, -beta, -alpha, opponent);
     }
+    */
 
     return best_score;
 }
@@ -635,6 +719,32 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
     pair<int, int> best_move;
     int best_score = numeric_limits<int>::min();
 
+    // Get the sorted valid moves for the current player
+    vector<pair<int, int>> sorted_moves = get_sorted_moves(player);
+
+    // Iterate through all sorted (valid) moves
+    for (const auto& move : sorted_moves) {
+        int i = move.first;
+        int j = move.second;
+
+        // Make a copy of the board and simulate the move
+        vector<vector<char>> board_copy = board;
+        make_move(i, j, player);
+
+        // Call negamax to predict the score
+        int score = -negamax(depth, numeric_limits<int>::min(), numeric_limits<int>::max(), opponent);
+
+        // Undo the move
+        board = board_copy;
+
+        // Update the best move and best score
+        if (score > best_score) {
+            best_score = score;
+            best_move = {i, j};
+        }
+    }
+
+    /*
     // Iterate through all cells in the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
@@ -658,6 +768,7 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
             }
         }
     }
+    */
 
     cout << format("Best score for {}: {}\n", player, best_score);  // for debugging, tells who is winning?
     return best_move;
