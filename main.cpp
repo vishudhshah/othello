@@ -599,34 +599,34 @@ int negamax(int depth, int alpha, int beta, char player) {
     char opponent = get_opponent(player);
 
     // Base case: game is over or depth limit reached
-    // BUG? cannot find optimal move towards end of game
-    // if (is_game_over()) {
-    //     // Calculate the scores and determine the winner
-    //     pair<int, int> scores = calculate_scores();
-    //     int player1_score = scores.first;
-    //     int player2_score = scores.second;
+    // POSSIBLE BUG: cannot find optimal move towards end of game
+    if (is_game_over()) {
+        // Calculate the scores and determine the winner
+        pair<int, int> scores = calculate_scores();
+        int player1_score = scores.first;
+        int player2_score = scores.second;
 
-    //     // Adding depth bonus favours faster wins
-    //     // Adding board eval maximizes winning score / minimizes losing score
-    //     if (player1_score > player2_score) {
-    //         // Player 1 wins
-    //         // return (player == PLAYER1) ? (1000000 + depth) : -(1000000 + depth);
-    //         return (player == PLAYER1) ? (1000000 + evaluate_board(player)) : -(1000000 + evaluate_board(opponent));
-    //     } else if (player2_score > player1_score) {
-    //         // Player 2 wins
-    //         // return (player == PLAYER2) ? (1000000 + depth) : -(1000000 + depth);
-    //         return (player == PLAYER2) ? (1000000 + evaluate_board(player)) : -(1000000 + evaluate_board(opponent));
-    //     } else {
-    //         // Draw
-    //         return 0;
-    //     }
-    // } else if (depth == 0) {
-    //     return evaluate_board(player);
-    // }
-
-    if (depth == 0 || is_game_over()) {
+        // Adding depth bonus favours faster wins
+        // Adding board eval maximizes winning score / minimizes losing score
+        if (player1_score > player2_score) {
+            // Player 1 wins
+            // return (player == PLAYER1) ? (1000000 + depth) : -(1000000 + depth);
+            return (player == PLAYER1) ? (1000000 + evaluate_board(player)) : -(1000000 + evaluate_board(opponent));
+        } else if (player2_score > player1_score) {
+            // Player 2 wins
+            // return (player == PLAYER2) ? (1000000 + depth) : -(1000000 + depth);
+            return (player == PLAYER2) ? (1000000 + evaluate_board(player)) : -(1000000 + evaluate_board(opponent));
+        } else {
+            // Draw
+            return 0;
+        }
+    } else if (depth == 0) {
         return evaluate_board(player);
     }
+
+    // if (depth == 0 || is_game_over()) {
+    //     return evaluate_board(player);
+    // }
 
     // Initialize the best score
     int best_score = numeric_limits<int>::min();
