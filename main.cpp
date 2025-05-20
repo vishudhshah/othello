@@ -367,22 +367,22 @@ void print_highlighted_board(char player) {
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
-                valid_moves.push_back(make_pair(i, j));
+                valid_moves.emplace_back(i, j);
             }
         }
     }
 
     // Highlight all valid moves
-    for (int i = 0; i < valid_moves.size(); i++) {
-        board[valid_moves[i].first][valid_moves[i].second] = VALID;
+    for (const auto& move : valid_moves) {
+        board[move.first][move.second] = VALID;
     }
 
     print_board();
     print_scores();
 
     // Dehighlight all valid moves
-    for (int i = 0; i < valid_moves.size(); i++) {
-        board[valid_moves[i].first][valid_moves[i].second] = EMPTY;
+    for (const auto& move : valid_moves) {
+        board[move.first][move.second] = EMPTY;
     }
 }
 
