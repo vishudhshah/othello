@@ -86,6 +86,86 @@ void print_board() {
 }
 
 /**
+ * @brief Get the mode of the game from the user
+ * 
+ * Mode 1: Player vs Player
+ * Mode 2: Player vs AI
+ * Mode 3: AI vs AI
+ * 
+ * @return An integer representing the mode of the game
+ */
+int get_game_mode() {
+    int mode;
+
+    // Get the mode of the game from the user
+    cout << "Enter the mode of the game:\n"
+        << "1. Player vs Player\n"
+        << "2. Player vs AI\n"
+        << "3. AI vs AI\n";
+    cin >> mode;
+
+    // Validate the user input
+    while (cin.fail() || mode < 1 || mode > 3) {
+        cin.clear(); // Clear error flags
+        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore rest of the line
+        cout << "Please enter a valid game mode.\n";
+        cin >> mode;
+    }
+    cout << '\n';
+
+    return mode;
+}
+
+/**
+ * @brief Get the depth of the search tree from the user
+ * 
+ * @return An integer representing the depth of the search tree
+ */
+int get_search_depth() {
+    int depth;
+
+    // Get the depth of the search tree from the user
+    cout << "Enter the depth of the search tree:\n";
+    cout << format("If you would like to use the default search depth ({}), enter 0.\n", DEFAULT_DEPTH);
+    cin >> depth;
+
+    // Validate the user input
+    while (depth < 0) {
+        cout << "Please enter a valid depth.\n";
+        cin >> depth;
+    }
+    cout << '\n';
+
+    // Use the default search depth if the user entered 0
+    return depth == 0 ? DEFAULT_DEPTH : depth;
+}
+
+/**
+ * @brief Get the disk color for the player from the user
+ * 
+ * @return A character representing the disk color
+ */
+char get_disk_color() {
+    char disk_color;
+
+    // Get the disk color for the player from the user
+    cout << "Enter the disk color for the player (B/b or W/w):\n";
+    cin >> disk_color;
+
+    // Validate the user input
+    while (disk_color != PLAYER1 && disk_color != PLAYER2 && disk_color != 'b' && disk_color != 'w') {
+        cout << "Please enter a valid disk color (B/b or W/w):\n";
+        cin >> disk_color;
+    }
+    cout << '\n';
+
+    // Convert to uppercase
+    disk_color = toupper(disk_color);
+
+    return disk_color;
+}
+
+/**
  * @brief Get user input for row and column
  * 
  * Takes input in the format "A1" or "a1" and converts it to the corresponding row and column
@@ -532,7 +612,7 @@ int negamax(int depth, int alpha, int beta, char player) {
         //     break;
         // }
     }
-    prune_branch:;
+    // prune_branch:;
 
     // If no valid move was found for current player, then the turn is skipped (since we checked if game is over at the start)
     if (best_score == numeric_limits<int>::min()) {
@@ -581,86 +661,6 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
 
     cout << format("Best score for {}: {}\n", player, best_score);  // for debugging, tells who is winning?
     return best_move;
-}
-
-/**
- * @brief Get the mode of the game from the user
- * 
- * Mode 1: Player vs Player
- * Mode 2: Player vs AI
- * Mode 3: AI vs AI
- * 
- * @return An integer representing the mode of the game
- */
-int get_game_mode() {
-    int mode;
-
-    // Get the mode of the game from the user
-    cout << "Enter the mode of the game:\n"
-        << "1. Player vs Player\n"
-        << "2. Player vs AI\n"
-        << "3. AI vs AI\n";
-    cin >> mode;
-
-    // Validate the user input
-    while (cin.fail() || mode < 1 || mode > 3) {
-        cin.clear(); // Clear error flags
-        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore rest of the line
-        cout << "Please enter a valid game mode.\n";
-        cin >> mode;
-    }
-    cout << '\n';
-
-    return mode;
-}
-
-/**
- * @brief Get the depth of the search tree from the user
- * 
- * @return An integer representing the depth of the search tree
- */
-int get_search_depth() {
-    int depth;
-
-    // Get the depth of the search tree from the user
-    cout << "Enter the depth of the search tree:\n";
-    cout << format("If you would like to use the default search depth ({}), enter 0.\n", DEFAULT_DEPTH);
-    cin >> depth;
-
-    // Validate the user input
-    while (depth < 0) {
-        cout << "Please enter a valid depth.\n";
-        cin >> depth;
-    }
-    cout << '\n';
-
-    // Use the default search depth if the user entered 0
-    return depth == 0 ? DEFAULT_DEPTH : depth;
-}
-
-/**
- * @brief Get the disk color for the player from the user
- * 
- * @return A character representing the disk color
- */
-char get_disk_color() {
-    char disk_color;
-
-    // Get the disk color for the player from the user
-    cout << "Enter the disk color for the player (B/b or W/w):\n";
-    cin >> disk_color;
-
-    // Validate the user input
-    while (disk_color != PLAYER1 && disk_color != PLAYER2 && disk_color != 'b' && disk_color != 'w') {
-        cout << "Please enter a valid disk color (B/b or W/w):\n";
-        cin >> disk_color;
-    }
-    cout << '\n';
-
-    // Convert to uppercase
-    disk_color = toupper(disk_color);
-
-    return disk_color;
 }
 
 
