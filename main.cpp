@@ -544,46 +544,41 @@ int evaluate_board(char player) {
  * @return A vector of pairs containing the row and column of valid moves, sorted by evaluation score
  */
 vector<pair<int, int>> get_sorted_moves(char player) {
-    // Initialize a vector to store moves along with their eval scores
-    vector<pair<pair<int, int>, int>> moves_with_scores;
+    // Define order to check for valid moves
+    static const vector<pair<int, int>> order = {
+        // Corners
+        {0,0}, {0,7}, {7,0}, {7,7},
 
-    // Iterate through all spaces to find valid moves
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (is_valid_move(i, j, player)) {
-                // Create a copy of the board to simulate the move
-                vector<vector<char>> board_copy = board;
-                make_move(i, j, player);
+        // Sides
+        {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, // top
+        {7,1}, {7,2}, {7,3}, {7,4}, {7,5}, {7,6}, // bottom
+        {1,0}, {2,0}, {3,0}, {4,0}, {5,0}, {6,0}, // left
+        {1,7}, {2,7}, {3,7}, {4,7}, {5,7}, {6,7}, // right
 
-                // Evaluate the board state after the move
-                int score = evaluate_board(player);
+        // Outer ring
+        {1,2}, {1,3}, {1,4}, {1,5},
+        {6,2}, {6,3}, {6,4}, {6,5},
+        {2,1}, {3,1}, {4,1}, {5,1},
+        {2,6}, {3,6}, {4,6}, {5,6},
 
-                // Restore the original board state
-                board = board_copy;
+        // Inner ring
+        {2,2}, {2,3}, {2,4}, {2,5},
+        {3,2}, {3,5},
+        {4,2}, {4,5},
+        {5,2}, {5,3}, {5,4}, {5,5},
 
-                // Store the move and its score
-                moves_with_scores.emplace_back(pair<int, int> {i, j}, score);
-            }
+        // X
+        {1,1}, {1,6}, {6,1}, {6,6},
+    };
+
+    vector<pair<int, int>> valid_moves;
+    for (const auto& move : order) {
+        if (is_valid_move(move.first, move.second, player)) {
+            valid_moves.push_back(move);
         }
     }
 
-    // Sort moves in descending order based on their eval scores
-    sort(
-        moves_with_scores.begin(),
-        moves_with_scores.end(),
-        [] (const auto& a, const auto& b) {
-            return a.second > b.second;
-        }
-    );
-
-    // Extract sorted moves into a new vector
-    vector<pair<int, int>> sorted_moves;
-    sorted_moves.reserve(moves_with_scores.size()); // Reserve space for efficiency
-    for (const auto& move : moves_with_scores) {
-        sorted_moves.emplace_back(move.first);
-    }
-
-    return sorted_moves;
+    return valid_moves;
 }
 
 /**
