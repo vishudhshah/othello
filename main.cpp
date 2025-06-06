@@ -637,7 +637,7 @@ int negamax(int depth, int alpha, int beta, char player) {
 
     // If no valid moves were found, pass the turn to the opponent
     if (sorted_moves.empty()) {
-        return -negamax(depth, -beta, -alpha, opponent);
+        return -negamax(depth - 1, -beta, -alpha, opponent);
     }
 
     // Iterate through all sorted (valid) moves
