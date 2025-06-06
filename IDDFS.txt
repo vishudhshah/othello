@@ -1,0 +1,35 @@
+IDDFS pseudocode
+
+predict_move(time_limit):
+    set current_depth = 1
+    set best depth = 0
+
+    get_sorted_moves
+
+    while time is left:
+        initialize current_best_move
+        set current_best_score = -∞
+
+        // initialize flag to check if all moves were explored at current depth
+        completed_depth = true
+
+        for each move at current depth:
+            if ran out of time:
+                set completed_depth = false
+                break
+
+            score = simulate move
+
+            update current_best_move and current_best_score if we found a better one
+        
+        if all moves explored at current depth:
+            update best_depth = current_depth
+            update best_move, best_score
+        else:
+            ran out of time, break while loop
+            best_depth, best_move, best_score are all set to previous depth's values
+        
+        increment depth for next iteration
+        current_depth++
+    
+    return best move found within time limit

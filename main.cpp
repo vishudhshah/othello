@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <format>
+#include <chrono>
 
 using namespace std;
 
@@ -20,6 +21,7 @@ const char VALID = '_';
 const char PLAYER1 = 'B';
 const char PLAYER2 = 'W';
 const int DEFAULT_DEPTH = 5;
+const int DEFAULT_TIME_LIMIT = 5; // Default time limit in seconds
 
 vector<vector<char>> board(BOARD_SIZE, vector<char>(BOARD_SIZE, EMPTY));
 
@@ -138,6 +140,30 @@ int get_search_depth() {
 
     // Use the default search depth if the user entered 0
     return depth == 0 ? DEFAULT_DEPTH : depth;
+}
+
+/**
+ * @brief Get the time limit for the AI's move from the user, for iterative deepening
+ * 
+ * @return An integer representing the time limit in seconds
+ */
+int get_time_limit() {
+    int time_limit;
+
+    // Get the time limit from the user
+    cout << "Enter the time limit for AI moves (in seconds):\n";
+    cout << format("If you would like to use the default time limit ({} seconds), enter 0.\n", DEFAULT_TIME_LIMIT);
+    cin >> time_limit;
+
+    // Validate the user input
+    while (time_limit < 0) {
+        cout << "Please enter a valid time limit.\n";
+        cin >> time_limit;
+    }
+    cout << '\n';
+
+    // Use the default time limit if the user entered 0
+    return time_limit == 0 ? DEFAULT_TIME_LIMIT : time_limit;
 }
 
 /**
@@ -711,67 +737,77 @@ int negamax(int depth, int alpha, int beta, char player) {
  * @brief Predict the best move for the current player
  * 
  * @param player The current player
+ * @param time_limit Time limit in seconds, for iterative deepening
  * @return A pair of integers representing the row and column of the best move
  */
-pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
+pair<int, int> predict_move(char player, int time_limit) {
     char opponent = get_opponent(player);
-
-    // Initialize the best move and best score
-    pair<int, int> best_move;
-    int best_score = numeric_limits<int>::min();
+    auto end_time = chrono::steady_clock::now() + chrono::seconds(time_limit);
 
     // Get the sorted valid moves for the current player
     vector<pair<int, int>> sorted_moves = get_sorted_moves(player);
 
-    // Iterate through all sorted (valid) moves
-    for (const auto& move : sorted_moves) {
-        int i = move.first;
-        int j = move.second;
-
-        // Make a copy of the board and simulate the move
-        vector<vector<char>> board_copy = board;
-        make_move(i, j, player);
-
-        // Call negamax to predict the score
-        int score = -negamax(depth, numeric_limits<int>::min(), numeric_limits<int>::max(), opponent);
-
-        // Undo the move
-        board = board_copy;
-
-        // Update the best move and best score
-        if (score > best_score) {
-            best_score = score;
-            best_move = {i, j};
-        }
+    // If there's only one valid move, return it immediately
+    if (sorted_moves.size() == 1) {
+        return sorted_moves[0];
     }
 
-    /*
-    // Iterate through all cells in the board
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            // Check if the move is valid
-            if (is_valid_move(i, j, player)) {
-                // Make a copy of the board and simulate the move
-                vector<vector<char>> board_copy = board;
-                make_move(i, j, player);
+    // Initialize the best move, best score, and current depth
+    pair<int, int> best_move;
+    int best_score = numeric_limits<int>::min();
+    int current_depth = 1;
+    int best_depth = 0;
 
-                // Call negamax to predict the score
-                int score = -negamax(depth, numeric_limits<int>::min(), numeric_limits<int>::max(), opponent);
+    // While time is left
+    while (chrono::steady_clock::now() < end_time) {
+        // Initialize the current best move and score
+        pair<int, int> current_best_move;
+        int current_best_score = numeric_limits<int>::min();
 
-                // Undo the move
-                board = board_copy;
+        // Initialize a flag to check if all moves were explored at current depth
+        bool completed_depth = true;
 
-                // Update the best move and best score
-                if (score > best_score) {
-                    best_score = score;
-                    best_move = make_pair(i, j);
-                }
+        // Try each move at the current depth
+        for (const auto& move : sorted_moves) {
+            // Check if we've run out of time before starting a new move
+            if (chrono::steady_clock::now() >= end_time) {
+                // If we have, then we did not complete the depth
+                completed_depth = false;
+                break;
+            }
+
+            // Make a copy of the board and simulate the move
+            vector<vector<char>> board_copy = board;
+            make_move(move.first, move.second, player);
+
+            // Call negamax to predict the score
+            int score = -negamax(current_depth, numeric_limits<int>::min(), numeric_limits<int>::max(), opponent);
+
+            // Undo the move
+            board = board_copy;
+
+            // Update the current best move and score
+            if (score > current_best_score) {
+                current_best_move = move;
+                current_best_score = score;
             }
         }
-    }
-    */
 
-    cout << format("Best score for {}: {}\n", player, best_score);  // for debugging, tells who is winning?
+        // Update the best move and score if we explored all moves at this depth
+        if (completed_depth) {
+            best_depth = current_depth;
+            best_score = current_best_score;
+            best_move = current_best_move;
+        } else {
+            // If we didn't complete the depth, we ran out of time
+            break;
+        }
+
+        // Increment depth for next iteration
+        current_depth++;
+    }
+
+    cout << format("Best score for {}: {} (depth reached: {})\n", player, best_score, best_depth); // for debugging, tells who is winning
     return best_move;
 }
 
@@ -787,16 +823,16 @@ pair<int, int> predict_move(char player, int depth=DEFAULT_DEPTH) {
 int main() {
     pair<int, int> user_input;
     int row, col;
-    int depth = DEFAULT_DEPTH;
+    int time_limit = DEFAULT_TIME_LIMIT;
 
     char player_color; // Player's disk color in Player vs AI mode
 
     // Get the game mode from the user
     int game_mode = get_game_mode();
     
-    // If the game mode involves AI, get the search depth from the user
+    // If the game mode involves AI, get the time limit from the user
     if (game_mode == 2 || game_mode == 3) {
-        depth = get_search_depth();
+        time_limit = get_time_limit();
 
         // If the game mode is Player vs AI, get the disk color for the player from the user
         if (game_mode == 2) {
@@ -855,7 +891,7 @@ int main() {
             cout << '\n';
         } else {
             // AI's turn
-            pair<int, int> ai_move = predict_move(current_player, depth);
+            pair<int, int> ai_move = predict_move(current_player, time_limit);
             row = ai_move.first;
             col = ai_move.second;
 
