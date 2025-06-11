@@ -93,7 +93,7 @@ std::pair<int, int> get_user_input() {
     std::cin >> user_input;
 
     // Validate the user input
-    while (user_input.length() != 2 || user_input[0] < 'A' || user_input[0] > 'H' && user_input[0] < 'a' || user_input[0] > 'h' || user_input[1] < '1' || user_input[1] > '8') {
+    while (user_input.length() != 2 || user_input[0] < 'A' || (user_input[0] > 'H' && user_input[0] < 'a') || user_input[0] > 'h' || user_input[1] < '1' || user_input[1] > '8') {
         std::cout << "Please enter a valid move (eg. A1 or a1): ";
         std::cin >> user_input;
     }
