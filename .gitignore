@@ -1,6 +1,5 @@
 .vscode
 *.dSYM
 .DS_Store
-logs
 __pycache__
 build
