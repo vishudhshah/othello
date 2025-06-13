@@ -6,25 +6,25 @@
 #include <algorithm>
 
 int game_phase() {
-    // Initialize a counter for the total number of pieces on the board
-    int total_pieces = 0;
+    // Initialize a counter for the total number of discs on the board
+    int total_discs = 0;
 
-    // Iterate through all cells in the board and count the number of pieces on the board
+    // Iterate through all cells in the board and count the number of discs on the board
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             if (board[i][j] == PLAYER1 || board[i][j] == PLAYER2) {
-                total_pieces++;
+                total_discs++;
             }
         }
     }
 
-    // Determine the game phase based on the total number of pieces
-    switch (total_pieces) {
+    // Determine the game phase based on the total number of discs
+    switch (total_discs) {
         case 4 ... 20:
             return 1;
-        case 21 ... 50:
+        case 21 ... 48:
             return 2;
-        case 51 ... 60:
+        case 49 ... 60:
             return 3;
         case 61 ... 64:
             return 4;
