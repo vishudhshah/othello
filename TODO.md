@@ -7,6 +7,7 @@
 - Exporting games as PGN.
 
 **Improvements**
+- Set depth limit to number of empty squares left so AI doesn't search too deep when the board is almost full.
 - Use OOP - refactor the code to use classes for the board, pieces, and AI.
 - Implement stability into eval function: A disk is stable if it cannot be flipped (e.g. corner-connected lines).
 - Cache valid moves once per board state to avoid recomputation.
