@@ -145,9 +145,9 @@ int negamax(int depth, int alpha, int beta, char player) {
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
     // Base case: game is over or depth limit reached
-    // Handle base case differently based on game phase
     int phase = game_phase();
-    if (phase == 1 || phase == 2) {
+    if (phase == 1 || phase == 2 || phase == 3) {
+        // If it possible to end the game early and win then do so
         if (is_game_over()) {
             // Calculate the scores and determine the winner
             std::pair<int, int> scores = calculate_scores();
@@ -164,10 +164,8 @@ int negamax(int depth, int alpha, int beta, char player) {
         } else if (depth == 0) {
             return evaluate_board(player);
         }
-    } else if (phase == 3 || phase == 4) {
-        if (depth == 0 || is_game_over()) {
-            return evaluate_board(player);
-        }
+    } else if (depth == 0 || is_game_over()) {
+        return evaluate_board(player);
     }
 
     // Initialize the best score
@@ -178,7 +176,7 @@ int negamax(int depth, int alpha, int beta, char player) {
 
     // If no valid moves were found, pass the turn to the opponent
     if (sorted_moves.empty()) {
-        return -negamax(depth - 1, -beta, -alpha, opponent);
+        return -negamax(depth, -beta, -alpha, opponent);
     }
 
     // Iterate through all sorted (valid) moves
