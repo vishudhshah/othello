@@ -139,7 +139,7 @@ int negamax(int depth, int alpha, int beta, char player) {
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
     // Base case: game is over or depth limit reached
-    // Handle base case differently based game phase
+    // Handle base case differently based on game phase
     int phase = game_phase();
     if (phase == 1 || phase == 2) {
         if (is_game_over()) {
