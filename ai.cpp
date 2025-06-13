@@ -94,7 +94,13 @@ int evaluate_board(char player) {
     int mobility_score = 10 * num_valid_moves;
 
     // Return the final evaluation score for the current player
-    return material_score + mobility_score;
+    if (phase == 1 || phase == 2 || phase == 3) {
+        // In the early and mid-game, return the material score plus mobility score
+        return material_score + mobility_score;
+    } else {
+        // In the endgame, return only the material score
+        return material_score;
+    }
 }
 
 std::vector<std::pair<int, int>> get_sorted_moves(char player) {
