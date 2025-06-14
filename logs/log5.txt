@@ -1,5 +1,4 @@
-Tested search depth with time limit of 60s per move - min 8.
-Same bug as previous log but looks like the "best score" was returned correctly from move 53 onwards, though before that is incorrect.
+See Move 52 - If it calculated a score of -4 with a depth of 155 then in the subsequent moves, the score should be equal or greater, never lower.
 
 ---
 
@@ -7,11 +6,14 @@ Enter the mode of the game:
 1. Player vs Player
 2. Player vs AI
 3. AI vs AI
-3
+2
 
 Enter the time limit for AI moves (in seconds):
 If you would like to use the default time limit (5 seconds), enter 0.
-60
+0
+
+Enter the disk color for the player (B/b or W/w):
+b
 
   A B C D E F G H
 1 . . . . . . . .
@@ -26,961 +28,942 @@ B: 2, W: 2
 
 Move 1
 Player B's turn.
-Best score for B: 71 (depth reached: 11)
-AI plays: F5
+Enter your move (eg. A1 or a1): c4
 
   A B C D E F G H
 1 . . . . . . . .
 2 . . . . . . . .
-3 . . . . . . . .
-4 . . . W B _ . .
-5 . . . B B B . .
-6 . . . _ . _ . .
+3 . . _ . _ . . .
+4 . . B B B . . .
+5 . . _ B W . . .
+6 . . . . . . . .
 7 . . . . . . . .
 8 . . . . . . . .
 B: 4, W: 1
 
 Move 2
 Player W's turn.
-Best score for W: -101 (depth reached: 12)
-AI plays: D6
-
-  A B C D E F G H
-1 . . . . . . . .
-2 . . . . . . . .
-3 . . _ . . . . .
-4 . . _ W B . . .
-5 . . _ W B B . .
-6 . . _ W . . . .
-7 . . _ . . . . .
-8 . . . . . . . .
-B: 3, W: 3
-
-Move 3
-Player B's turn.
-Best score for B: 38 (depth reached: 11)
+Best score for W: 45 (depth reached: 9)
 AI plays: C5
 
   A B C D E F G H
 1 . . . . . . . .
 2 . . . . . . . .
 3 . . . . . . . .
-4 . _ . W B _ . .
-5 . . B B B B . .
-6 . _ . W . _ . .
+4 . . B B B . . .
+5 . . W W W . . .
+6 . _ _ _ _ _ . .
 7 . . . . . . . .
 8 . . . . . . . .
-B: 5, W: 2
+B: 3, W: 3
+
+Move 3
+Player B's turn.
+Enter your move (eg. A1 or a1): c6
+
+  A B C D E F G H
+1 . . . . . . . .
+2 . . . . . . . .
+3 . . _ . _ . . .
+4 . . B B B . . .
+5 . _ B B W . . .
+6 . . B . . . . .
+7 . . . . . . . .
+8 . . . . . . . .
+B: 6, W: 1
 
 Move 4
 Player W's turn.
-Best score for W: 72 (depth reached: 9)
-AI plays: F4
+Best score for W: 41 (depth reached: 9)
+AI plays: E3
 
   A B C D E F G H
 1 . . . . . . . .
-2 . . . . . . . .
-3 . . . _ _ _ . .
-4 . . . W W W . .
-5 . . B B W B . .
-6 . . . W . . . .
-7 . . . _ _ . . .
+2 . . . . . _ . .
+3 . . . . W _ . .
+4 . . B B W _ . .
+5 . . B B W _ . .
+6 . . B . . _ . .
+7 . . . . . . . .
 8 . . . . . . . .
-B: 3, W: 5
+B: 5, W: 3
 
 Move 5
 Player B's turn.
-Best score for B: 44 (depth reached: 9)
-AI plays: D3
-
-  A B C D E F G H
-1 . . . . . . . .
-2 . . . _ . . . .
-3 . . _ B _ . . .
-4 . _ _ B B W . .
-5 . _ B B W B _ .
-6 . . . W . _ . .
-7 . . . . . . . .
-8 . . . . . . . .
-B: 6, W: 3
-
-Move 6
-Player W's turn.
-Best score for W: 66 (depth reached: 9)
-AI plays: F6
+Enter your move (eg. A1 or a1): f3
 
   A B C D E F G H
 1 . . . . . . . .
 2 . . . . . . . .
-3 . . . B . . . .
-4 . . . B B W _ .
-5 . . B B W W _ .
-6 . . . W _ W _ .
-7 . . . _ _ . _ .
+3 . . _ . W B _ .
+4 . . B B B . . .
+5 . _ B B W . . .
+6 . _ B . . . . .
+7 . . . . . . . .
 8 . . . . . . . .
-B: 5, W: 5
+B: 7, W: 2
 
-Move 7
-Player B's turn.
-Best score for B: -100 (depth reached: 10)
-AI plays: E7
-
-  A B C D E F G H
-1 . . . . . . . .
-2 . . _ . . . . .
-3 . . _ B _ . . .
-4 . . _ B B W . .
-5 . _ B B W W . .
-6 . . . B . W . .
-7 . . _ . B . . .
-8 . . . _ . . . .
-B: 7, W: 4
-
-Move 8
+Move 6
 Player W's turn.
-Best score for W: 74 (depth reached: 9)
-AI plays: C2
-
-  A B C D E F G H
-1 . . . . . . . .
-2 . . W _ . . . .
-3 . . . W . _ _ .
-4 . . . B W W _ .
-5 . . B B W W _ .
-6 . . . B . W . .
-7 . . . . B . _ .
-8 . . . . . . . .
-B: 5, W: 7
-
-Move 9
-Player B's turn.
-Best score for B: 59 (depth reached: 9)
+Best score for W: -104 (depth reached: 8)
 AI plays: G3
 
   A B C D E F G H
 1 . . . . . . . .
-2 . . W . . . . .
-3 . . _ W . _ B .
-4 . . _ B W B _ .
-5 . _ B B B W . .
-6 . . _ B _ W . .
-7 . . . _ B . . .
-8 . . . _ . . . .
+2 . . . . _ _ _ .
+3 . . . . W W W .
+4 . . B B B . . .
+5 . . B B W _ . .
+6 . . B . _ _ . .
+7 . . . . . . . .
+8 . . . . . . . .
+B: 6, W: 4
+
+Move 7
+Player B's turn.
+Enter your move (eg. A1 or a1): f6
+
+  A B C D E F G H
+1 . . . . . . . .
+2 . . . . . . . .
+3 . . . . W W W .
+4 . . B B B . . .
+5 . . B B B . . .
+6 . _ B . _ B . .
+7 . _ . . . . . .
+8 . . . . . . . .
+B: 8, W: 3
+
+Move 8
+Player W's turn.
+Best score for W: -158 (depth reached: 8)
+AI plays: E6
+
+  A B C D E F G H
+1 . . . . . . . .
+2 . . . . . _ _ .
+3 . . . . W W W .
+4 . . B B W _ . .
+5 . . B B W _ . .
+6 . . B _ W B . .
+7 . . . . . _ . .
+8 . . . . . . . .
+B: 6, W: 6
+
+Move 9
+Player B's turn.
+Enter your move (eg. A1 or a1): d6
+
+  A B C D E F G H
+1 . . . . . . . .
+2 . . . . . . . .
+3 . . _ . W W W .
+4 . _ B B W . . .
+5 . _ B B W . . .
+6 . _ B B B B . .
+7 . _ _ . _ . _ .
+8 . . . . . . . .
 B: 8, W: 5
 
 Move 10
 Player W's turn.
-Best score for W: -65 (depth reached: 8)
-AI plays: F3
+Best score for W: -27 (depth reached: 7)
+AI plays: B4
 
   A B C D E F G H
 1 . . . . . . . .
-2 . . W _ . . _ .
-3 . . . W _ W B .
-4 . . . B W W _ .
-5 . . B B B W _ .
-6 . . . B . W . .
-7 . . . . B . _ .
+2 . . . . _ _ _ .
+3 _ _ _ _ W W W .
+4 . W W W W _ . .
+5 . . B B W _ . .
+6 . . B B B B . .
+7 . . . . . . . .
 8 . . . . . . . .
-B: 7, W: 7
+B: 6, W: 8
 
 Move 11
 Player B's turn.
-Best score for B: -123 (depth reached: 8)
-AI plays: G4
+Enter your move (eg. A1 or a1): c3
 
   A B C D E F G H
 1 . . . . . . . .
-2 . . W . . . . .
-3 . . _ W . W B _
-4 . . . B B B B .
-5 . _ B B B W . _
-6 . . _ B . W . .
-7 . . . _ B . . .
-8 . . . _ . . . .
+2 . . . _ . . . .
+3 . . B . W W W .
+4 . W B B W . . .
+5 . . B B B . . .
+6 . _ B B B B . .
+7 . _ . . _ . . .
+8 . . . . . . . .
 B: 10, W: 5
 
 Move 12
 Player W's turn.
-Best score for W: -50 (depth reached: 8)
-AI plays: H3
+Best score for W: -19 (depth reached: 7)
+AI plays: B6
 
   A B C D E F G H
-1 . _ . . . . . .
-2 . . W _ . _ _ _
-3 . . . W . W W W
-4 . . . B B B W _
-5 . . B B B W _ .
-6 . . . B . W _ .
-7 . . . . B _ _ .
+1 . . . . . . . .
+2 . . . . _ . _ .
+3 _ . B _ W W W .
+4 _ W B W W _ . .
+5 _ _ W B B . . .
+6 _ W B B B B . .
+7 . . . . . . . .
 8 . . . . . . . .
 B: 8, W: 8
 
 Move 13
 Player B's turn.
-Best score for B: -141 (depth reached: 8)
+Enter your move (eg. A1 or a1): a3
+
+  A B C D E F G H
+1 . . . . . . . .
+2 . _ . . . . . .
+3 B . B . W W W .
+4 _ B B W W . . .
+5 . . B B B . . .
+6 . W B B B B _ .
+7 . _ . _ _ . _ .
+8 . . . . . . . .
+B: 11, W: 6
+
+Move 14
+Player W's turn.
+Best score for W: 34 (depth reached: 7)
 AI plays: G6
 
   A B C D E F G H
 1 . . . . . . . .
-2 . . W . . . . .
-3 . . _ W . W W W
-4 . . _ B B B W .
-5 . . B B B B . .
-6 . . _ B _ W B _
-7 . . _ _ B . . _
-8 . . . _ . . . .
-B: 10, W: 7
-
-Move 14
-Player W's turn.
-Best score for W: -31 (depth reached: 8)
-AI plays: E6
-
-  A B C D E F G H
-1 . _ . . . . . .
-2 . . W _ . _ _ _
-3 . . . W . W W W
-4 . . . B B B W _
-5 . . B B B W _ .
-6 . . . B W W B .
-7 . . . . B _ _ .
+2 . . . . _ _ _ .
+3 B . B _ W W W .
+4 . B B W W _ . .
+5 . . B B B . . .
+6 . W W W W W W .
+7 _ _ _ _ _ _ _ .
 8 . . . . . . . .
-B: 9, W: 9
+B: 7, W: 11
 
 Move 15
 Player B's turn.
-Best score for B: -154 (depth reached: 8)
-AI plays: G5
+Enter your move (eg. A1 or a1): f4
 
   A B C D E F G H
 1 . . . . . . . .
-2 . . W . . . . .
-3 . . . W _ W W W
-4 . . _ B B B W .
-5 . . B B B B B .
-6 . . _ B W B B _
-7 . . _ _ B _ _ _
-8 . . . . _ . . .
-B: 12, W: 7
+2 . _ _ . . . . .
+3 B _ B _ W W W .
+4 . B B B B B . .
+5 . . B B B _ _ .
+6 . W W W W W W .
+7 . . . . . . . .
+8 . . . . . . . .
+B: 10, W: 9
 
 Move 16
 Player W's turn.
-Best score for W: -10 (depth reached: 8)
-AI plays: H6
+Best score for W: -127 (depth reached: 6)
+AI plays: C2
 
   A B C D E F G H
-1 . _ . . . . . .
-2 . . W _ . _ _ _
-3 . . . W . W W W
-4 . . . B B B W _
-5 . . B B B B B .
-6 . . . B W W W W
-7 . . . _ B _ _ _
+1 . . . . . . . .
+2 . _ W _ _ _ _ _
+3 B _ W . W W W .
+4 . B W B B B . .
+5 . _ W B B . . .
+6 . W W W W W W .
+7 _ _ _ _ _ _ _ .
 8 . . . . . . . .
-B: 10, W: 10
+B: 7, W: 13
 
 Move 17
 Player B's turn.
-Best score for B: -174 (depth reached: 8)
-AI plays: F7
+Enter your move (eg. A1 or a1): d2
 
   A B C D E F G H
 1 . . . . . . . .
-2 . . W . . . . .
-3 . . . W _ W W W
-4 . . _ B B B W .
-5 . . B B B B B .
-6 . . _ B B B W W
-7 . . _ _ B B . .
-8 . . . . _ _ . .
-B: 13, W: 8
+2 . _ W B _ _ . .
+3 B . B _ B W W .
+4 _ B W B B B _ .
+5 . . W B B _ . .
+6 . W W W W W W .
+7 . . . . . . . .
+8 . . . . . . . .
+B: 10, W: 11
 
 Move 18
 Player W's turn.
-Best score for W: -18 (depth reached: 8)
-AI plays: C4
+Best score for W: -154 (depth reached: 6)
+AI plays: F5
 
   A B C D E F G H
-1 . _ . . . . . .
-2 . . W _ . _ _ _
-3 . _ _ W _ W W W
-4 . . W W W W W .
-5 . . B B B B B _
-6 . . . B B B W W
-7 . . . . B B _ _
+1 . . _ . . . . .
+2 . _ W B . . _ .
+3 B . B . B W W _
+4 . B W B B W _ .
+5 . . W W W W _ .
+6 . W W W W W W .
+7 _ _ _ _ _ . _ _
 8 . . . . . . . .
-B: 10, W: 12
+B: 7, W: 15
 
 Move 19
 Player B's turn.
-Best score for B: -160 (depth reached: 8)
-AI plays: C3
+Enter your move (eg. A1 or a1): c1
 
   A B C D E F G H
-1 . . . . . . . .
-2 . . W . . . . .
-3 . _ B W . W W W
-4 . _ B B W W W .
-5 . _ B B B B B .
-6 . . _ B B B W W
-7 . . _ _ B B . .
-8 . . . . _ _ . .
-B: 13, W: 10
+1 . . B . . . . .
+2 . _ B B _ _ . .
+3 B . B _ B W W .
+4 _ B W B B W . .
+5 . . W W W W . .
+6 . W W W W W W .
+7 . . . . . . . .
+8 . . . . . . . .
+B: 9, W: 14
 
 Move 20
 Player W's turn.
-Best score for W: -56 (depth reached: 8)
-AI plays: C7
-
-  A B C D E F G H
-1 . _ _ . . . . .
-2 . . W _ _ _ _ .
-3 . . B W _ W W W
-4 . . B B W W W _
-5 . . B B W B B _
-6 . . _ W B B W W
-7 . . W _ B B _ _
-8 . . . . . . . .
-B: 11, W: 13
-
-Move 21
-Player B's turn.
-Best score for B: -111 (depth reached: 8)
-AI plays: C1
-
-  A B C D E F G H
-1 . _ B . . . . .
-2 . _ B . . . . .
-3 . _ B W . W W W
-4 . _ B B W W W .
-5 . _ B B W B B _
-6 . . _ W B B W W
-7 . . W _ B B _ .
-8 . . . . _ _ . .
-B: 13, W: 12
-
-Move 22
-Player W's turn.
-Best score for W: -179 (depth reached: 8)
-AI plays: B2
-
-  A B C D E F G H
-1 _ . B . . . . .
-2 _ W B _ _ _ _ .
-3 _ . W W _ W W W
-4 . . B W W W W _
-5 . . B B W B B _
-6 . . _ W B B W W
-7 . . W _ B B _ _
-8 . . . . . . . .
-B: 11, W: 15
-
-Move 23
-Player B's turn.
-Best score for B: -31 (depth reached: 8)
-AI plays: D2
-
-  A B C D E F G H
-1 . _ B _ _ . . .
-2 . W B B _ . . .
-3 . . W B _ W W W
-4 . _ B B W W W .
-5 . _ B B W B B _
-6 . . _ W B B W W
-7 . . W _ B B _ .
-8 . . . . _ _ . .
-B: 14, W: 13
-
-Move 24
-Player W's turn.
-Best score for W: -182 (depth reached: 8)
-AI plays: D1
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B W _ _ _ .
-3 _ . W W _ W W W
-4 . . B W W W W _
-5 . . B W W B B _
-6 . . _ W B B W W
-7 . . W . B B _ _
-8 . . . . . . . .
-B: 10, W: 18
-
-Move 25
-Player B's turn.
-Best score for B: 8 (depth reached: 8)
+Best score for W: 38 (depth reached: 7)
 AI plays: E2
 
   A B C D E F G H
-1 . _ B W _ . . .
-2 . W B B B _ . .
-3 . _ W B _ W W W
-4 . _ B W W W W .
-5 . _ B W W B B _
-6 . _ _ W B B W W
-7 . . W _ B B _ .
-8 . . . . _ _ _ .
-B: 13, W: 16
-
-Move 26
-Player W's turn.
-Best score for W: -180 (depth reached: 8)
-AI plays: E3
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B _ _ .
-3 _ . W W W W W W
-4 . _ B W W W W _
-5 . . B W W B B _
-6 . . _ W B B W W
-7 . . W _ B B _ _
+1 . . B . . . . .
+2 . . B B W _ . .
+3 B . B . W W W .
+4 . B W B W W _ .
+5 . . W W W W _ .
+6 . W W W W W W .
+7 _ . _ _ _ . _ .
 8 . . . . . . . .
-B: 12, W: 18
+B: 7, W: 17
 
-Move 27
+Move 21
 Player B's turn.
-Best score for B: -3 (depth reached: 8)
-AI plays: F2
+Enter your move (eg. A1 or a1): c7
 
   A B C D E F G H
-1 . _ B W _ _ . .
-2 . W B B B B _ .
-3 . _ W W B B W W
-4 . _ B B W B W .
-5 . _ B W W B B _
-6 . . _ W B B W W
-7 . . W _ B B _ .
-8 . . . . _ _ _ .
-B: 17, W: 14
-
-Move 28
-Player W's turn.
-Best score for W: -173 (depth reached: 8)
-AI plays: D7
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B B _ _
-3 _ _ W W B B W W
-4 . _ B B W B W _
-5 . . B W W W B _
-6 . . _ W W B W W
-7 . _ W W B B _ _
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W .
+4 _ B B B W W . .
+5 . _ B W W W . .
+6 . W B W W W W .
+7 . _ B . . . . .
 8 . _ . _ . . . .
-B: 15, W: 17
+B: 11, W: 14
 
-Move 29
-Player B's turn.
-Best score for B: 16 (depth reached: 8)
+Move 22
+Player W's turn.
+Best score for W: -168 (depth reached: 6)
 AI plays: D8
 
   A B C D E F G H
-1 . _ B W _ _ . .
-2 . W B B B B _ .
-3 . _ W W B B W W
-4 . _ B B W B W .
-5 . _ B B W W B _
-6 . . _ B W B W W
-7 . . W B B B _ .
-8 . . _ B _ _ _ .
-B: 19, W: 14
+1 . . B . . . . .
+2 . . B B W _ _ .
+3 B . B . W W W .
+4 . B B B W W _ .
+5 . . B W W W _ .
+6 _ W B W W W W _
+7 _ . W _ _ _ _ .
+8 . . _ W . . . .
+B: 10, W: 16
 
-Move 30
+Move 23
+Player B's turn.
+Enter your move (eg. A1 or a1): d7
+
+  A B C D E F G H
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W .
+4 _ B B B W W . .
+5 . _ B B W W . .
+6 . W B B W W W .
+7 . _ W B _ . . .
+8 . . _ W . . . .
+B: 13, W: 14
+
+Move 24
 Player W's turn.
-Best score for W: -42 (depth reached: 9)
+Best score for W: -129 (depth reached: 6)
 AI plays: C8
 
   A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B B _ _
-3 _ _ W W B B W W
-4 . _ B B W B W _
-5 . . B B W W B _
-6 . _ . B W B W W
-7 . _ W W B B _ _
-8 . _ W B . . . .
-B: 18, W: 16
+1 . . B . . . . .
+2 . . B B W _ _ _
+3 B . B . W W W .
+4 . B B B W W _ .
+5 . . B B W W _ .
+6 _ W B B W W W _
+7 _ . W W . _ _ .
+8 . _ W W _ . . .
+B: 12, W: 16
 
-Move 31
+Move 25
 Player B's turn.
-Best score for B: 25 (depth reached: 8)
-AI plays: B8
+Enter your move (eg. A1 or a1): a6
 
   A B C D E F G H
-1 . _ B W _ _ . .
-2 . W B B B B _ .
-3 . _ W W B B W W
-4 . _ B B W B W .
-5 . _ B B W W B _
-6 . . _ B W B W W
-7 . _ B W B B _ .
-8 . B B B _ _ _ .
-B: 21, W: 14
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W .
+4 _ B B B W W . .
+5 _ _ B B W W . .
+6 B B B B W W W .
+7 _ _ W W . . . .
+8 . . W W . . . .
+B: 14, W: 15
 
-Move 32
+Move 26
 Player W's turn.
-Best score for W: -94 (depth reached: 9)
-AI plays: E8
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B B _ _
-3 _ _ W W B B W W
-4 . _ B B W B W _
-5 . . B B W W B _
-6 . . . B W B W W
-7 . . B W W W _ _
-8 . B B B W _ _ .
-B: 19, W: 17
-
-Move 33
-Player B's turn.
-Best score for B: 94 (depth reached: 8)
-AI plays: F8
-
-  A B C D E F G H
-1 . _ B W _ _ . .
-2 . W B B B B _ .
-3 . _ W W B B W W
-4 . _ B B W B W .
-5 . _ B B W W B _
-6 . . _ B W B W W
-7 . _ B W B B _ .
-8 . B B B B B _ .
-B: 23, W: 14
-
-Move 34
-Player W's turn.
-Best score for W: -308 (depth reached: 9)
-AI plays: G8
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B B _ _
-3 _ _ W W B B W W
-4 . _ B B W B W _
-5 . . B B W W B _
-6 . . _ B W B W W
-7 . . B W B W _ _
-8 . B B B B B W _
-B: 22, W: 16
-
-Move 35
-Player B's turn.
-Best score for B: 447 (depth reached: 9)
-AI plays: H8
-
-  A B C D E F G H
-1 . _ B W _ _ . .
-2 . W B B B B _ .
-3 . _ W W B B W W
-4 . _ B B W B W .
-5 . _ B B W W B _
-6 . . _ B W B W W
-7 . _ B W B W _ .
-8 . B B B B B B B
-B: 24, W: 15
-
-Move 36
-Player W's turn.
-Best score for W: -683 (depth reached: 10)
-AI plays: C6
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B B _ _
-3 _ _ W W B B W W
-4 . _ W B W B W _
-5 . _ W W W W B _
-6 . _ W W W B W W
-7 . _ B W B W _ _
-8 . B B B B B B B
-B: 20, W: 20
-
-Move 37
-Player B's turn.
-Best score for B: 552 (depth reached: 9)
-AI plays: H7
-
-  A B C D E F G H
-1 . _ B W _ _ _ .
-2 . W B B B B _ .
-3 . _ W B B B W W
-4 . . W B B B W .
-5 . . W W W B B _
-6 . . W W W B B W
-7 . _ B W B W _ B
-8 . B B B B B B B
-B: 25, W: 16
-
-Move 38
-Player W's turn.
-Best score for W: -499 (depth reached: 9)
-AI plays: G7
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B B _ _
-3 _ _ W B B B W W
-4 . _ W B B B W _
-5 . _ W W W B W _
-6 . _ W W W W W W
-7 . _ B W B W W B
-8 . B B B B B B B
-B: 22, W: 20
-
-Move 39
-Player B's turn.
-Best score for B: 522 (depth reached: 10)
-AI plays: H5
-
-  A B C D E F G H
-1 . _ B W _ _ _ .
-2 . W B B B B _ .
-3 . _ W B B B W W
-4 . . W B B B B _
-5 . . W W W B B B
-6 . . W W W W B B
-7 . _ B W B B W B
-8 . B B B B B B B
-B: 28, W: 15
-
-Move 40
-Player W's turn.
-Best score for W: -557 (depth reached: 11)
-AI plays: H4
-
-  A B C D E F G H
-1 _ . B W _ . . .
-2 _ W B B B B _ _
-3 _ _ W B B B W W
-4 . _ W W W W W W
-5 . _ W W W B W B
-6 . _ W W W W B B
-7 . _ B W B B W B
-8 . B B B B B B B
-B: 23, W: 21
-
-Move 41
-Player B's turn.
-Best score for B: 594 (depth reached: 11)
-AI plays: H2
-
-  A B C D E F G H
-1 . _ B W _ _ _ .
-2 . W B B B B _ B
-3 . _ W B B B B B
-4 . . W W W B W B
-5 . . W W B B W B
-6 . . W B W W B B
-7 . _ B W B B W B
-8 . B B B B B B B
-B: 30, W: 15
-
-Move 42
-Player W's turn.
-Best score for W: -761 (depth reached: 12)
-AI plays: G2
-
-  A B C D E F G H
-1 _ _ B W _ _ _ .
-2 _ W W W W W W B
-3 _ _ W B B W W B
-4 . _ W W W B W B
-5 . _ W W B B W B
-6 . _ W B W W B B
-7 . . B W B B W B
-8 . B B B B B B B
-B: 24, W: 22
-
-Move 43
-Player B's turn.
-Best score for B: 744 (depth reached: 13)
-AI plays: B3
-
-  A B C D E F G H
-1 . _ B W . . . .
-2 . W W W W W W B
-3 _ B B B B W W B
-4 _ _ B W W B W B
-5 . _ W B B B W B
-6 . . W B B W B B
-7 . _ B W B B W B
-8 . B B B B B B B
-B: 29, W: 18
-
-Move 44
-Player W's turn.
-Best score for W: -785 (depth reached: 12)
-AI plays: B1
-
-  A B C D E F G H
-1 _ W W W _ _ _ _
-2 _ W W W W W W B
-3 . B B B B W W B
-4 . _ B W W B W B
-5 . _ W B B B W B
-6 . _ W B B W B B
-7 . _ B W B B W B
-8 . B B B B B B B
-B: 28, W: 20
-
-Move 45
-Player B's turn.
-Best score for B: 34 (depth reached: 13)
-AI plays: B7
-
-  A B C D E F G H
-1 . W W W . . . .
-2 . W W W W W W B
-3 _ B B B B W W B
-4 _ _ B W W B W B
-5 . _ W B B B W B
-6 . _ B B B W B B
-7 _ B B W B B W B
-8 _ B B B B B B B
-B: 30, W: 19
-
-Move 46
-Player W's turn.
-Best score for W: -34 (depth reached: 12)
-AI plays: B6
-
-  A B C D E F G H
-1 _ W W W _ _ _ _
-2 _ W W W W W W B
-3 . B B B B W W B
-4 . _ B W W B W B
-5 _ _ W B B B W B
-6 _ W W W W W B B
-7 _ B B W B B W B
-8 . B B B B B B B
-B: 27, W: 23
-
-Move 47
-Player B's turn.
-Best score for B: 24 (depth reached: 14)
-AI plays: A6
-
-  A B C D E F G H
-1 . W W W . . . .
-2 . W W W W W W B
-3 _ B B B B W W B
-4 _ _ B W W B W B
-5 . _ W B B B W B
-6 B B B B B B B B
-7 _ B B W B B W B
-8 _ B B B B B B B
-B: 33, W: 18
-
-Move 48
-Player W's turn.
-Best score for W: -26 (depth reached: 26)
-AI plays: A3
-
-  A B C D E F G H
-1 _ W W W _ _ _ _
-2 _ W W W W W W B
-3 W W W W W W W B
-4 . _ B W W B W B
-5 . _ W B B B W B
-6 B B B B B B B B
-7 . B B W B B W B
-8 . B B B B B B B
-B: 29, W: 23
-
-Move 49
-Player B's turn.
-Best score for B: 22 (depth reached: 74)
-AI plays: E1
-
-  A B C D E F G H
-1 . W W W B _ _ .
-2 . W W W B B W B
-3 W W W W B W B B
-4 . _ B W B B W B
-5 . _ W B B B W B
-6 B B B B B B B B
-7 _ B B W B B W B
-8 _ B B B B B B B
-B: 35, W: 18
-
-Move 50
-Player W's turn.
-Best score for W: -28 (depth reached: 174)
-AI plays: A8
-
-  A B C D E F G H
-1 _ W W W B _ _ .
-2 _ W W W B B W B
-3 W W W W B W B B
-4 . _ B W W B W B
-5 . _ W W B B W B
-6 B B W B B B B B
-7 _ W B W B B W B
-8 W B B B B B B B
-B: 31, W: 23
-
-Move 51
-Player B's turn.
-Best score for B: 22 (depth reached: 617)
-AI plays: A1
-
-  A B C D E F G H
-1 B B B B B _ _ .
-2 _ B W W B B W B
-3 W W B W B W B B
-4 . _ B B W B W B
-5 . _ W W B B W B
-6 B B W B B B B B
-7 _ W B W B B W B
-8 W B B B B B B B
-B: 38, W: 17
-
-Move 52
-Player W's turn.
-Best score for W: -26 (depth reached: 1060)
-AI plays: G1
-
-  A B C D E F G H
-1 B B B B B _ W .
-2 _ B W W B W W B
-3 W W B W W W B B
-4 _ _ B W W B W B
-5 . _ W W B B W B
-6 B B W B B B B B
-7 _ W B W B B W B
-8 W B B B B B B B
-B: 35, W: 21
-
-Move 53
-Player B's turn.
-Best score for B: 20 (depth reached: 3600)
+Best score for W: -129 (depth reached: 6)
 AI plays: B5
 
   A B C D E F G H
-1 B B B B B _ W .
-2 _ B W W B W W B
-3 W W B W W W B B
-4 . _ B W W B W B
-5 _ B B B B B W B
-6 B B B B B B B B
-7 _ W B B B B W B
-8 W B B B B B B B
-B: 40, W: 17
+1 . . B . . . . .
+2 . . B B W _ . _
+3 B . B . W W W .
+4 . B B B W W _ .
+5 . W W W W W _ .
+6 B B W B W W W _
+7 . . W W . _ _ .
+8 . _ W W . . . .
+B: 11, W: 19
 
-Move 54
-Player W's turn.
-Best score for W: -20 (depth reached: 4002)
-AI plays: A2
-
-  A B C D E F G H
-1 B B B B B _ W _
-2 W W W W B W W B
-3 W W B W W W B B
-4 _ _ B W W B W B
-5 . B B B B B W B
-6 B B B B B B B B
-7 _ W B B B B W B
-8 W B B B B B B B
-B: 39, W: 19
-
-Move 55
+Move 27
 Player B's turn.
-Best score for B: 20 (depth reached: 18735)
-AI plays: A4
+Enter your move (eg. A1 or a1): f7
 
   A B C D E F G H
-1 B B B B B _ W .
-2 B W B W B W W B
-3 B B B W W W B B
-4 B _ B W W B W B
-5 _ B B B B B W B
-6 B B B B B B B B
-7 _ W B B B B W B
-8 W B B B B B B B
-B: 44, W: 15
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W .
+4 _ B B B W W . .
+5 _ W W B W W . .
+6 B B W B B W W .
+7 _ _ W W _ B . .
+8 . . W W _ _ . .
+B: 14, W: 17
 
-Move 56
+Move 28
 Player W's turn.
-Best score for W: -20 (depth reached: 49476)
-AI plays: A7
+Best score for W: -102 (depth reached: 6)
+AI plays: E8
 
   A B C D E F G H
-1 B B B B B _ W _
-2 B W B W B W W B
-3 B B B W W W B B
-4 B _ B W W B W B
-5 _ B W B B B W B
-6 B W B B B B B B
-7 W W B B B B W B
-8 W B B B B B B B
-B: 42, W: 18
+1 . . B . _ . . .
+2 . . B B W _ _ _
+3 B . B . W W W .
+4 . B B B W W _ .
+5 _ W W B W W _ .
+6 B B W B B W W _
+7 . _ W W . W _ .
+8 . _ W W W . _ .
+B: 13, W: 19
 
-Move 57
+Move 29
 Player B's turn.
-Best score for B: 20 (depth reached: 164818)
-AI plays: H1
+Enter your move (eg. A1 or a1): g4
 
   A B C D E F G H
-1 B B B B B _ W B
-2 B W B W B W B B
-3 B B B W W B B B
-4 B _ B W B B W B
-5 _ B W B B B W B
-6 B W B B B B B B
-7 W W B B B B W B
-8 W B B B B B B B
-B: 46, W: 15
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W _
+4 . B B B B B B .
+5 _ W W B W B _ _
+6 B B W B B W W .
+7 _ _ W W _ W . .
+8 . . W W W . . .
+B: 17, W: 16
 
-Move 58
+Move 30
 Player W's turn.
-Best score for W: -20 (depth reached: 425290)
-AI plays: F1
+Best score for W: -69 (depth reached: 6)
+AI plays: H3
 
   A B C D E F G H
-1 B B B B B W W B
-2 B W B W W W B B
-3 B B B W W B B B
-4 B _ B W B B W B
-5 _ B W B B B W B
-6 B W B B B B B B
-7 W W B B B B W B
-8 W B B B B B B B
-B: 45, W: 17
+1 . . B . _ . . .
+2 . . B B W _ _ _
+3 B . B . W W W W
+4 . B B B B B W _
+5 _ W W B W W _ .
+6 B B W B W W W _
+7 . _ W W _ W _ _
+8 . _ W W W _ _ .
+B: 14, W: 20
 
-Move 59
+Move 31
 Player B's turn.
-Best score for B: 20 (depth reached: 1601299)
+Enter your move (eg. A1 or a1): e7
+
+  A B C D E F G H
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W W
+4 _ B B B B B W .
+5 _ W W B B W _ .
+6 B B W B B W W .
+7 _ _ W W B W . .
+8 . . W W W _ . .
+B: 17, W: 18
+
+Move 32
+Player W's turn.
+Best score for W: -38 (depth reached: 6)
+AI plays: F8
+
+  A B C D E F G H
+1 . . B . _ . . .
+2 . . B B W _ _ _
+3 B . B . W W W W
+4 . B B B B B W _
+5 _ W W B B W _ .
+6 B B W W B W W _
+7 . _ W W W W _ _
+8 . _ W W W W _ .
+B: 15, W: 21
+
+Move 33
+Player B's turn.
+Enter your move (eg. A1 or a1): h6
+
+  A B C D E F G H
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W W
+4 _ B B B B B W .
+5 _ W W B B W _ _
+6 B B W W B B B B
+7 _ _ W W W W . _
+8 . . W W W W . .
+B: 18, W: 19
+
+Move 34
+Player W's turn.
+Best score for W: 79 (depth reached: 7)
+AI plays: H5
+
+  A B C D E F G H
+1 . . B . _ . . .
+2 . . B B W _ _ _
+3 B . B . W W W W
+4 . B B B B B W _
+5 _ W W B B W _ W
+6 B B W W B B W B
+7 . _ W W W W . _
+8 . _ W W W W _ .
+B: 17, W: 21
+
+Move 35
+Player B's turn.
+Enter your move (eg. A1 or a1): g5
+
+  A B C D E F G H
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W W
+4 _ B B B B B W _
+5 _ W W B B B B W
+6 B B W W B B W B
+7 _ _ W W W W . _
+8 . . W W W W . .
+B: 19, W: 20
+
+Move 36
+Player W's turn.
+Best score for W: 35 (depth reached: 7)
 AI plays: A5
 
   A B C D E F G H
-1 B B B B B W W B
-2 B W B W W W B B
-3 B B B W W B B B
-4 B _ B W B B W B
-5 B B W B B B W B
-6 B B B B B B B B
-7 W W B B B B W B
-8 W B B B B B B B
-B: 47, W: 16
+1 . . B . _ . . .
+2 . . B B W _ _ _
+3 B . B . W W W W
+4 _ B B B B B W _
+5 W W W B B B B W
+6 B W W W B B W B
+7 _ _ W W W W _ _
+8 . _ W W W W _ .
+B: 18, W: 22
 
-Move 60
-Player W's turn.
-AI plays: B4
+Move 37
+Player B's turn.
+Enter your move (eg. A1 or a1): a4
 
   A B C D E F G H
-1 B B B B B W W B
-2 B W B W W W B B
-3 B W W W W B B B
-4 B W W W B B W B
-5 B W W B B B W B
-6 B W B B B B B B
-7 W W B B B B W B
-8 W B B B B B B B
-B: 42, W: 22
+1 . . B . . . . .
+2 . _ B B W . . .
+3 B _ B _ W W W W
+4 B B B B B B W _
+5 B W W B B B B W
+6 B W W W B B W B
+7 . . W W W W . _
+8 . . W W W W . .
+B: 20, W: 21
 
-Game Over. Player B won by 20 points!
+Move 38
+Player W's turn.
+Best score for W: -122 (depth reached: 8)
+AI plays: B3
+
+  A B C D E F G H
+1 . . B . _ . . .
+2 . . B B W _ _ _
+3 B W B _ W W W W
+4 B W W B B B W _
+5 B W W W B B B W
+6 B W W W W B W B
+7 _ _ W W W W _ _
+8 . _ W W W W . .
+B: 16, W: 26
+
+Move 39
+Player B's turn.
+Enter your move (eg. A1 or a1): d3
+
+  A B C D E F G H
+1 . _ B _ _ . . .
+2 . _ B B W . . .
+3 B W B B W W W W
+4 B W B B B B W _
+5 B B W W B B B W
+6 B W W W W B W B
+7 . . W W W W . _
+8 . . W W W W . .
+B: 19, W: 24
+
+Move 40
+Player W's turn.
+Best score for W: -19 (depth reached: 7)
+AI plays: D1
+
+  A B C D E F G H
+1 . _ B W _ _ . .
+2 _ _ W W W _ _ _
+3 B W B W W W W W
+4 B W B W B B W _
+5 B B W W B B B W
+6 B W W W W B W B
+7 . _ W W W W _ _
+8 . _ W W W W _ .
+B: 15, W: 29
+
+Move 41
+Player B's turn.
+Enter your move (eg. A1 or a1): e1
+
+  A B C D E F G H
+1 . . B B B _ . .
+2 . _ W B B _ . .
+3 B W B W B W W W
+4 B W B W B B W _
+5 B B W W B B B W
+6 B W W W W B W B
+7 . . W W W W _ _
+8 . . W W W W . .
+B: 20, W: 25
+
+Move 42
+Player W's turn.
+Best score for W: -185 (depth reached: 8)
+AI plays: F1
+
+  A B C D E F G H
+1 . _ B B B W _ .
+2 _ _ W B W _ _ _
+3 B W B W B W W W
+4 B W B W B B W _
+5 B B W W B B B W
+6 B W W W W B W B
+7 _ _ W W W W _ _
+8 . _ W W W W _ .
+B: 19, W: 27
+
+Move 43
+Player B's turn.
+Enter your move (eg. A1 or a1): g1
+
+  A B C D E F G H
+1 . . B B B B B .
+2 . _ W B W _ . .
+3 B W B W B W W W
+4 B W B W B B W _
+5 B B W W B B B W
+6 B W W W W B W B
+7 . . W W W W _ _
+8 . . W W W W . .
+B: 21, W: 26
+
+Move 44
+Player W's turn.
+Best score for W: -243 (depth reached: 8)
+AI plays: B2
+
+  A B C D E F G H
+1 _ _ B B B B B .
+2 _ W W B W _ _ _
+3 B W W W B W W W
+4 B W B W B B W _
+5 B B W W B B B W
+6 B W W W W B W B
+7 _ _ W W W W _ _
+8 . _ W W W W _ .
+B: 20, W: 28
+
+Move 45
+Player B's turn.
+Enter your move (eg. A1 or a1): a7
+
+  A B C D E F G H
+1 . . B B B B B .
+2 . W W B W . . .
+3 B W W W B W W W
+4 B W B B B B W _
+5 B B B W B B B W
+6 B B W W W B W B
+7 B _ W W W W _ _
+8 . . W W W W . .
+B: 24, W: 25
+
+Move 46
+Player W's turn.
+Best score for W: -192 (depth reached: 9)
+AI plays: G7
+
+  A B C D E F G H
+1 . _ B B B B B .
+2 _ W W B W _ _ _
+3 B W W W B W W W
+4 B W B W B B W _
+5 B B B W W B B W
+6 B B W W W W W B
+7 B _ W W W W W _
+8 . _ W W W W _ .
+B: 21, W: 29
+
+Move 47
+Player B's turn.
+Enter your move (eg. A1 or a1): f2
+
+  A B C D E F G H
+1 . . B B B B B .
+2 . W W B B B _ .
+3 B W W W B B W W
+4 B W B W B B W _
+5 B B B W W B B W
+6 B B W W W W W B
+7 B _ W W W W W _
+8 . . W W W W . .
+B: 24, W: 27
+
+Move 48
+Player W's turn.
+Best score for W: -28 (depth reached: 12)
+AI plays: H4
+
+  A B C D E F G H
+1 . _ B B B B B .
+2 _ W W B B B . _
+3 B W W W B B W W
+4 B W B W B B W W
+5 B B B W W B W W
+6 B B W W W W W B
+7 B _ W W W W W _
+8 . _ W W W W _ .
+B: 23, W: 29
+
+Move 49
+Player B's turn.
+Enter your move (eg. A1 or a1): h2
+
+  A B C D E F G H
+1 . . B B B B B .
+2 . W W B B B _ B
+3 B W W W B B B B
+4 B W B W B B W B
+5 B B B W W B W B
+6 B B W W W W W B
+7 B _ W W W W W .
+8 . . W W W W . .
+B: 28, W: 25
+
+Move 50
+Player W's turn.
+Best score for W: -20 (depth reached: 85)
+AI plays: G2
+
+  A B C D E F G H
+1 . _ B B B B B .
+2 _ W W W W W W B
+3 B W W W B W W B
+4 B W B W W B W B
+5 B B B W W B W B
+6 B B W W W W W B
+7 B . W W W W W _
+8 . _ W W W W _ .
+B: 22, W: 32
+
+Move 51
+Player B's turn.
+Enter your move (eg. A1 or a1): b8
+
+  A B C D E F G H
+1 . . B B B B B .
+2 . W W W W W W B
+3 B W W W B W W B
+4 B W B W W B W B
+5 B B B W B B W B
+6 B B W B W W W B
+7 B _ B W W W W .
+8 _ B W W W W . .
+B: 26, W: 29
+
+Move 52
+Player W's turn.
+Best score for W: -4 (depth reached: 155)
+AI plays: A8
+
+  A B C D E F G H
+1 _ _ B B B B B .
+2 _ W W W W W W B
+3 B W W W B W W B
+4 B W B W W B W B
+5 B B B W B B W B
+6 B B W B W W W B
+7 B . B W W W W _
+8 W W W W W W _ _
+B: 25, W: 31
+
+Move 53
+Player B's turn.
+Enter your move (eg. A1 or a1): b1
+
+  A B C D E F G H
+1 _ B B B B B B .
+2 _ B B W W W W B
+3 B B W B B W W B
+4 B B B W B B W B
+5 B B B W B B W B
+6 B B W B W W W B
+7 B _ B W W W W .
+8 W W W W W W . .
+B: 32, W: 25
+
+Move 54
+Player W's turn.
+Best score for W: -12 (depth reached: 609)
+AI plays: A1
+
+  A B C D E F G H
+1 W B B B B B B _
+2 _ W B W W W W B
+3 B B W B B W W B
+4 B B B W B B W B
+5 B B B W B B W B
+6 B B W B W W W B
+7 B _ B W W W W _
+8 W W W W W W _ _
+B: 31, W: 27
+
+Move 55
+Player B's turn.
+Enter your move (eg. A1 or a1): h1
+
+  A B C D E F G H
+1 W B B B B B B B
+2 _ W B W W W B B
+3 B B W B B B W B
+4 B B B W B B W B
+5 B B B W B B W B
+6 B B W B W W W B
+7 B _ B W W W W .
+8 W W W W W W . .
+B: 34, W: 25
+
+Move 56
+Player W's turn.
+Best score for W: -12 (depth reached: 4875)
+AI plays: A2
+
+  A B C D E F G H
+1 W B B B B B B B
+2 W W B W W W B B
+3 W W W B B B W B
+4 W B W W B B W B
+5 W B B W B B W B
+6 W B W B W W W B
+7 W _ B W W W W _
+8 W W W W W W _ _
+B: 27, W: 33
+
+Move 57
+Player B's turn.
+Enter your move (eg. A1 or a1): b7
+
+  A B C D E F G H
+1 W B B B B B B B
+2 W W B W W W B B
+3 W W W B B B W B
+4 W B W W B B W B
+5 W B B B B B W B
+6 W B B B W W W B
+7 W B B W W W W .
+8 W W W W W W . .
+B: 30, W: 31
+
+Player W's turn is skipped!
+  A B C D E F G H
+1 W B B B B B B B
+2 W W B W W W B B
+3 W W W B B B W B
+4 W B W W B B W B
+5 W B B B B B W B
+6 W B B B W W W B
+7 W B B W W W W _
+8 W W W W W W _ _
+B: 30, W: 31
+Move 58
+Player B's turn.
+Enter your move (eg. A1 or a1): g8
+
+  A B C D E F G H
+1 W B B B B B B B
+2 W W B W W W B B
+3 W W W B B B B B
+4 W B W W B B B B
+5 W B B B B B B B
+6 W B B B B W B B
+7 W B B W W B B _
+8 W W W W W W B _
+B: 38, W: 24
+
+Move 59
+Player W's turn.
+Best score for W: -12 (depth reached: 78838)
+AI plays: H8
+
+  A B C D E F G H
+1 W B B B B B B B
+2 W W B W W W B B
+3 W W W B B B B B
+4 W B W W B B B B
+5 W B B B B B B B
+6 W B B B B W B B
+7 W B B W W B W _
+8 W W W W W W W W
+B: 36, W: 27
+
+Move 60
+Player B's turn.
+Enter your move (eg. A1 or a1): h7
+
+  A B C D E F G H
+1 W B B B B B B B
+2 W W B W W W B B
+3 W W W B B B B B
+4 W B W W B B B B
+5 W B B B B B B B
+6 W B B B B W B B
+7 W B B W W B B B
+8 W W W W W W W W
+B: 38, W: 26
+
+Game Over. Player B won by 12 points!
