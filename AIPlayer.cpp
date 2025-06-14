@@ -1,5 +1,6 @@
 #include "AIPlayer.hpp"
 #include "Board.hpp" // For getValidMoves
+#include <iostream>  // For std::cerr (used in getMove if strategy is null)
 // Note: AIStrategy.hpp is included via AIPlayer.hpp, providing full definition.
 
 AIPlayer::AIPlayer(char symbol, AIStrategy* aiStrategy, int timeLimit)

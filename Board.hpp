@@ -13,10 +13,10 @@
  */
 class Board {
 private:
-    /// @brief 2D vector representing the game grid. Stores player symbols or EMPTY.
-    std::vector<std::vector<char>> grid;
     /// @brief The size of one dimension of the square board.
     int boardSize;
+    /// @brief 2D vector representing the game grid. Stores player symbols or EMPTY.
+    std::vector<std::vector<char>> grid;
 
 public:
     /**
