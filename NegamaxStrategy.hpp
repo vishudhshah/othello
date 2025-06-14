@@ -38,21 +38,19 @@ public:
 private:
     /**
      * @brief The core Negamax algorithm with Alpha-Beta pruning.
-     * Recursively explores the game tree to a given depth to find the best score for the current player.
+     * Recursively explores the game tree to a given depth to find the best score for the current active player.
+     * The score returned is always from the perspective of the `activePlayerSymbol`.
      * @param currentBoard The current board state for this node of the search. (Passed by value for modification)
      * @param depth The remaining depth to search.
-     * @param alpha The alpha value for alpha-beta pruning (best score found so far for the maximizing player).
-     * @param beta The beta value for alpha-beta pruning (best score found so far for the minimizing player).
-     * @param playerSymbol The symbol of the player whose turn it is at this node.
-     * @param isMaximizingPlayer True if the current player at this node is trying to maximize the score,
-     *                           false if trying to minimize. This helps align with the Negamax principle where
-     *                           score = -negamax(opponent).
-     * @param startTime The time point when the overall `findBestMove` search started. Used for time limit checks.
-     * @param timeLimitMs The total time limit in milliseconds for the `findBestMove` operation.
-     * @return The evaluated score of the board from the perspective of `playerSymbol` if `isMaximizingPlayer` is true,
-     *         otherwise from the perspective of the opponent. Returns special values if timeout occurs.
+     * @param alpha The alpha value for alpha-beta pruning (best score found so far for `activePlayerSymbol`).
+     * @param beta The beta value for alpha-beta pruning (worst score found so far for `activePlayerSymbol`'s opponent, from `activePlayerSymbol`'s view).
+     * @param activePlayerSymbol The symbol of the player whose turn it is at this node and for whom the score is being calculated.
+     * @param globalStartTime The time point when the overall `findBestMove` search started. Used for time limit checks.
+     * @param globalTimeLimitMs The total time limit in milliseconds for the `findBestMove` operation.
+     * @return The evaluated score of the board from the perspective of `activePlayerSymbol`.
+     *         Returns alpha if a timeout occurs, representing a safe "best guess so far".
      */
-    int negamax(Board currentBoard, int depth, int alpha, int beta, char playerSymbol, bool isMaximizingPlayer, std::chrono::steady_clock::time_point startTime, int timeLimitMs);
+    int negamax(Board currentBoard, int depth, int alpha, int beta, char activePlayerSymbol, std::chrono::steady_clock::time_point globalStartTime, int globalTimeLimitMs);
 
     /**
      * @brief Evaluates the given board state for a specific player.
