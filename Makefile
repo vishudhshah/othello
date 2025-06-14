@@ -1,8 +1,8 @@
 # Compiler, flags, source files, header files, object/dep paths, output file
 CXX = clang++
 CXXFLAGS = -std=c++20 -Wall -Wextra -O2
-SRC = main.cpp constants.cpp board.cpp ai.cpp input.cpp
-HEADERS = constants.hpp board.hpp ai.hpp input.hpp
+SRC = main.cpp Game.cpp Board.cpp Player.cpp HumanPlayer.cpp AIPlayer.cpp NegamaxStrategy.cpp
+HEADERS = GameConstants.hpp Game.hpp Board.hpp Player.hpp HumanPlayer.hpp AIPlayer.hpp NegamaxStrategy.hpp AIStrategy.hpp
 OUT = main
 
 # Create a build directory for .o and .d files
