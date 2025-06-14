@@ -1,7 +1,6 @@
 #include "AIPlayer.hpp"
 #include "Board.hpp" // For getValidMoves
-// AIStrategy.hpp will be included when AIStrategy is implemented
-// For now, we don't have the definition of AIStrategy or its methods.
+// Note: AIStrategy.hpp is included via AIPlayer.hpp, providing full definition.
 
 AIPlayer::AIPlayer(char symbol, AIStrategy* aiStrategy, int timeLimit)
     : Player(symbol), strategy(aiStrategy), timeLimitSeconds(timeLimit) {}

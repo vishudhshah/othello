@@ -10,7 +10,7 @@ HumanPlayer::HumanPlayer(char symbol) : Player(symbol) {}
 std::pair<int, int> HumanPlayer::getMove(const Board& board) {
     std::string userInput;
     int row, col;
-    int boardSize = board.isFull() ? GameConstants::BOARD_SIZE : GameConstants::BOARD_SIZE; // Placeholder, real board size needed from Board class if dynamic
+    // int boardSize = GameConstants::BOARD_SIZE; // Board size is fixed by GameConstants
 
     // Get user input
     std::cout << "Player " << playerSymbol << ", enter your move (e.g., A1 or a1): ";

@@ -120,8 +120,8 @@ int main() {
         // Sticking to one strategy object for AIvAI for now as per initial thought,
         // and main will delete it. If AIPlayer took ownership, this would be different.
         // Reverting to single shared strategy for AIvAI for simplicity of cleanup:
-        if (player2) delete player2; // Clean up if previous path (like PvAI) created it. Should not happen here.
-        if (player1) delete player1;
+        // if (player2) delete player2; // These were incorrectly placed and are not needed here as p1/p2 are null
+        // if (player1) delete player1;
 
         aiStrategy = new NegamaxStrategy(DEFAULT_DEPTH); // One strategy for both
         player1 = new AIPlayer(PLAYER1, aiStrategy, timeLimit);

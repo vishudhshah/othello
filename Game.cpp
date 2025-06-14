@@ -1,5 +1,6 @@
 #include "Game.hpp"
 #include "GameConstants.hpp"
+#include "AIPlayer.hpp" // Required for dynamic_cast<AIPlayer*>
 #include <iostream>
 #include <vector>
 #include <string> // Required for std::string in HumanPlayer getMove adaptation
@@ -92,24 +93,10 @@ void Game::playTurn() {
 
     std::pair<int, int> move = currentPlayer->getMove(board);
 
-    if (move.first == -1 && move.second == -1 && dynamic_cast<AIPlayer*>(currentPlayer) != nullptr) {
-        // AIPlayer might return (-1,-1) if it has no moves, which is already handled by validMoves.empty() check.
-        // This specific check might be redundant if AIPlayer::getMove is robust.
-        std::cout << "AI has no valid moves or chose not to move." << std::endl;
-        // No need to print board again if no move was made.
-        return;
-    }
-
-
-    // Validate move again, especially if HumanPlayer's getMove doesn't do it thoroughly,
-    // or if AI could potentially return an invalid move (though it shouldn't).
-    if (board.isValidMove(move.first, move.second, currentPlayer->getSymbol())) {
-        board.applyMove(move.first, move.second, currentPlayer->getSymbol());
-        std::cout << "Move applied: " << char('A' + move.second) << move.first + 1 << std::endl;
-    } else {
-        // This case should ideally not be reached if getMove and isValidMove are correctly implemented.
-        std::cout << "Error: Invalid move selected by player " << currentPlayer->getSymbol() << ". Turn skipped." << std::endl;
-    }
+    // The getMove() method is expected to return a valid move if validMoves was not empty.
+    // HumanPlayer::getMove() includes validation. AIPlayer::getMove() should also ensure validity.
+    board.applyMove(move.first, move.second, currentPlayer->getSymbol());
+    std::cout << "Move applied: " << char('A' + move.second) << (move.first + 1) << std::endl;
 
     board.printBoard();
     printScores();

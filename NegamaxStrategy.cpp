@@ -73,68 +73,48 @@ std::vector<std::pair<int, int>> NegamaxStrategy::getSortedMoves(const Board& bo
     return validMoves;
 }
 
-int NegamaxStrategy::negamax(Board currentBoard, int depth, int alpha, int beta, char playerSymbol, bool isMaximizingPlayer, std::chrono::steady_clock::time_point startTime, int timeLimitMs) {
 
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count() > timeLimitMs) {
-        return isMaximizingPlayer ? std::numeric_limits<int>::min() + 1 : std::numeric_limits<int>::max() -1; // Indicate timeout
+int NegamaxStrategy::negamax(Board currentBoard, int depth, int alpha, int beta, char activePlayerSymbol, std::chrono::steady_clock::time_point globalStartTime, int globalTimeLimitMs) {
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - globalStartTime).count() > globalTimeLimitMs) {
+        return alpha; // Timeout: return a safe "best guess so far" or 0 if preferred. Alpha is a cautious choice.
     }
-
-    char originalPlayerSymbol = playerSymbol; // The player for whom we are maximizing the score at this node initially.
-                                          // This is the player whose turn it is for `currentBoard`.
 
     // Check for game over condition for the currentBoard state
-    bool p1_has_moves = !currentBoard.getValidMoves(GameConstants::PLAYER1).empty();
-    bool p2_has_moves = !currentBoard.getValidMoves(GameConstants::PLAYER2).empty();
-    bool gameIsOver = currentBoard.isFull() || (!p1_has_moves && !p2_has_moves);
+    char opponentSymbol = getOpponentSymbol(activePlayerSymbol);
+    bool activePlayerHasMoves = !currentBoard.getValidMoves(activePlayerSymbol).empty();
+    bool opponentHasMoves = !currentBoard.getValidMoves(opponentSymbol).empty();
+    bool gameIsOver = currentBoard.isFull() || (!activePlayerHasMoves && !opponentHasMoves);
 
     if (depth == 0 || gameIsOver) {
-        int eval = evaluateBoard(currentBoard, originalPlayerSymbol);
-        return isMaximizingPlayer ? eval : -eval;
+        return evaluateBoard(currentBoard, activePlayerSymbol);
     }
 
-    std::vector<std::pair<int, int>> moves = getSortedMoves(currentBoard, playerSymbol);
+    std::vector<std::pair<int, int>> moves = getSortedMoves(currentBoard, activePlayerSymbol);
 
-    if (moves.empty()) {
-        // No valid moves for current player, pass turn.
-        // Score is evaluated from the perspective of the next player, then negated.
-        return -negamax(currentBoard, depth -1 , -beta, -alpha, getOpponentSymbol(playerSymbol), !isMaximizingPlayer, startTime, timeLimitMs);
+    if (moves.empty()) { // No valid moves for activePlayerSymbol, pass turn
+        // Opponent also has no moves (already checked by gameIsOver), this is a terminal state for score.
+        // Actually, gameIsOver would catch this. If only current player has no moves, then it's a pass.
+        return -negamax(currentBoard, depth - 1, -beta, -alpha, opponentSymbol, globalStartTime, globalTimeLimitMs);
     }
 
-    int bestValue;
-    if (isMaximizingPlayer) {
-        bestValue = std::numeric_limits<int>::min();
-        for (const auto& move : moves) {
-            Board nextBoard = currentBoard;
-            nextBoard.applyMove(move.first, move.second, playerSymbol);
-            int value = negamax(nextBoard, depth - 1, alpha, beta, getOpponentSymbol(playerSymbol), false, startTime, timeLimitMs);
-            bestValue = std::max(bestValue, value);
-            alpha = std::max(alpha, value);
-            if (beta <= alpha) {
-                break; // Beta cut-off
-            }
-        }
-    } else { // Minimizing player (opponent's turn from the perspective of original player)
-        bestValue = std::numeric_limits<int>::max();
-        for (const auto& move : moves) {
-            Board nextBoard = currentBoard;
-            nextBoard.applyMove(move.first, move.second, playerSymbol);
-            // The recursive call is for the other player, so isMaximizingPlayer becomes true.
-            // The score returned by negamax will be from playerSymbol's perspective (original player's opponent).
-            // We want to minimize this score.
-            int value = negamax(nextBoard, depth - 1, alpha, beta, getOpponentSymbol(playerSymbol), true, startTime, timeLimitMs);
-            bestValue = std::min(bestValue, value);
-            beta = std::min(beta, value);
-            if (beta <= alpha) {
-                break; // Alpha cut-off
-            }
+    int maxEval = std::numeric_limits<int>::min();
+    for (const auto& move : moves) {
+        Board nextBoard = currentBoard;
+        nextBoard.applyMove(move.first, move.second, activePlayerSymbol);
+        int eval = -negamax(nextBoard, depth - 1, -beta, -alpha, opponentSymbol, globalStartTime, globalTimeLimitMs);
+
+        maxEval = std::max(maxEval, eval);
+        alpha = std::max(alpha, eval);
+        if (alpha >= beta) {
+            break; // Pruning
         }
     }
-    return bestValue;
+    return maxEval;
 }
 
 
 std::pair<int, int> NegamaxStrategy::findBestMove(const Board& board, char playerSymbol, int timeLimitSeconds) {
-    iterationStartTime = std::chrono::steady_clock::now();
+    iterationStartTime = std::chrono::steady_clock::now(); // This is the global start time for the entire findBestMove call
     iterationTimeLimitMs = timeLimitSeconds * 1000;
 
     std::vector<std::pair<int, int>> validMoves = getSortedMoves(board, playerSymbol);
@@ -151,19 +131,16 @@ std::pair<int, int> NegamaxStrategy::findBestMove(const Board& board, char playe
 
     // Iterative Deepening
     for (int currentDepth = 1; currentDepth <= maxDepth; ++currentDepth) {
-        if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - iterationStartTime).count() > iterationTimeLimitMs) {
-            std::cout << "Time limit reached before starting depth " << currentDepth << std::endl;
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - iterationStartTime).count() >= iterationTimeLimitMs) {
             break;
         }
-        std::cout << "Searching at depth: " << currentDepth << std::endl;
 
-        std::pair<int, int> currentBestMoveThisIteration = validMoves[0];
-        int bestScoreThisIteration = std::numeric_limits<int>::min();
+        std::pair<int, int> currentBestMoveThisIteration = validMoves[0]; // Default to first move
+        int currentBestScoreThisIteration = std::numeric_limits<int>::min();
         bool completedThisDepth = true;
 
         for (const auto& move : validMoves) {
-             if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - iterationStartTime).count() > iterationTimeLimitMs) {
-                std::cout << "Time limit reached during depth " << currentDepth << std::endl;
+             if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - iterationStartTime).count() >= iterationTimeLimitMs) {
                 completedThisDepth = false;
                 break;
             }
@@ -171,32 +148,26 @@ std::pair<int, int> NegamaxStrategy::findBestMove(const Board& board, char playe
             Board nextBoard = board;
             nextBoard.applyMove(move.first, move.second, playerSymbol);
 
-            // Call negamax for the opponent. The score returned is from the opponent's perspective.
-            // So, a high score for opponent is bad for us (playerSymbol).
-            // We negate it to get the score from playerSymbol's perspective.
-            // The 'isMaximizingPlayer' for the first call to negamax should effectively be 'false'
-            // because we are evaluating the state *after* playerSymbol has made a move,
-            // and it's now opponent's turn.
-            int score = -negamax(nextBoard, currentDepth - 1, std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), getOpponentSymbol(playerSymbol), true, iterationStartTime, iterationTimeLimitMs);
+            // The score returned by negamax is from the perspective of the player whose turn it is *in that call*.
+            // Since it's opponent's turn on nextBoard, we negate the result.
+            int score = -negamax(nextBoard, currentDepth - 1, std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), getOpponentSymbol(playerSymbol), iterationStartTime, iterationTimeLimitMs);
 
-            if (score > bestScoreThisIteration) {
-                bestScoreThisIteration = score;
+            if (score > currentBestScoreThisIteration) {
+                currentBestScoreThisIteration = score;
                 currentBestMoveThisIteration = move;
             }
         }
 
         if (completedThisDepth) {
             bestMoveSoFar = currentBestMoveThisIteration;
-            bestScoreSoFar = bestScoreThisIteration;
-            std::cout << "Completed depth " << currentDepth << ". Best move: (" << bestMoveSoFar.first << "," << bestMoveSoFar.second << ") with score: " << bestScoreSoFar << std::endl;
+            bestScoreSoFar = currentBestScoreThisIteration;
         } else {
-             std::cout << "Did not complete depth " << currentDepth << ". Using results from depth " << (currentDepth -1) << std::endl;
-            break; // Time ran out for this depth, use results from previous completed depth
+            // Time ran out for this depth, use results from previous completed depth (already stored in bestMoveSoFar)
+            break;
         }
-         // If maxDepth is very high, and time limit is short, this prevents overly long searches.
-        if (currentDepth == GameConstants::BOARD_SIZE * GameConstants::BOARD_SIZE) break; // Max practical depth
+        // If maxDepth is very high, and time limit is short, this prevents overly long searches.
+        if (currentDepth >= GameConstants::BOARD_SIZE * GameConstants::BOARD_SIZE - board.countDiscs(GameConstants::EMPTY) ) break; // Max practical depth based on empty cells
     }
 
-    std::cout << "Final best move for " << playerSymbol << ": (" << bestMoveSoFar.first << "," << bestMoveSoFar.second << ") with score: " << bestScoreSoFar << std::endl;
     return bestMoveSoFar;
 }

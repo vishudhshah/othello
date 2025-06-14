@@ -65,9 +65,8 @@ bool Board::isValidMove(int row, int col, char playerSymbol) const {
 }
 
 void Board::applyMove(int row, int col, char playerSymbol) {
-    if (!isValidMove(row, col, playerSymbol)) {
-        return; // Or throw an exception
-    }
+    // Assume move is already validated before calling this.
+    // If not, uncomment: if (!isValidMove(row, col, playerSymbol)) return;
 
     grid[row][col] = playerSymbol;
     char opponentSymbol = (playerSymbol == GameConstants::PLAYER1) ? GameConstants::PLAYER2 : GameConstants::PLAYER1;
