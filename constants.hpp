@@ -16,4 +16,4 @@ extern std::vector<std::vector<char>> board;
 extern const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE];
 
 // Weighted piece counter for endgame
-extern const int ENDGAME_WEIGHTS[BOARD_SIZE][BOARD_SIZE]; 
+extern const int ENDGAME_WEIGHTS[BOARD_SIZE][BOARD_SIZE];

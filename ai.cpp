@@ -225,8 +225,18 @@ std::pair<int, int> predict_move(char player, int time_limit) {
     int current_depth = 1;
     int best_depth = 0;
 
-    // While time is left
-    while (std::chrono::steady_clock::now() < end_time) {
+    // Get the number of empty cells on the board
+    int empty_cells = 0;
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j] == EMPTY) {
+                empty_cells++;
+            }
+        }
+    }
+
+    // While time is left and depth is less than the number of empty cells
+    while (std::chrono::steady_clock::now() < end_time && current_depth <= empty_cells) {
         // Initialize the current best move and score
         std::pair<int, int> current_best_move;
         int current_best_score = std::numeric_limits<int>::min();

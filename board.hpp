@@ -12,4 +12,4 @@ bool is_game_over();
 bool turn_skip(char player);
 std::pair<int, int> calculate_scores();
 void print_scores();
-void print_winning_message(); 
+void print_winning_message();
