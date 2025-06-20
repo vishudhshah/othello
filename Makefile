@@ -10,18 +10,19 @@ BUILD_DIR = build
 OBJ = $(addprefix $(BUILD_DIR)/, $(SRC:.cpp=.o))
 DEPS = $(OBJ:.o=.d)
 
-# Ensure the build directory exists
-$(shell mkdir -p $(BUILD_DIR))
-
 # Default target
 all: $(OUT)
+
+# Create build directory if it doesn't exist
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
 # Build the output file (linking)
 $(OUT): $(OBJ)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(OUT)
 
 # Compile source files to object files and generate dependencies
-$(BUILD_DIR)/%.o: %.cpp
+$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
 # Include auto-generated dependencies
