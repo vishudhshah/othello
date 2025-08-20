@@ -1,5 +1,6 @@
 Didn't play the winning move when it could.
 This was because only the score was considered, which did not account for an early win.
+- Possibly fixed
 
 ---
 
