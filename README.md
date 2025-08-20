@@ -9,6 +9,8 @@ Othello/Reversi game coded in C++. Can play against an 'AI'.
   1. Run the `main` binary file and follow the prompts, or
   2. Download the source code and run `make` to compile, then run the `main` binary file.
 
+**Disclaimer**: If you are on Windows then you may need to compile the code yourself; the provided Makefile and binary executable was meant for Unix-based systems.
+
 ---
 
 ## Game modes
