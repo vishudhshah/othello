@@ -1,6 +1,10 @@
 #include "board.hpp"
 #include <iostream>
 #include <format>
+#include <fstream>
+#include <ctime>
+#include <chrono>
+#include <filesystem>
 
 std::string player_name(char player) {
     return player == PLAYER1 ? "Black" : "White";
@@ -200,4 +204,52 @@ void print_winning_message() {
             player_name(player1_score > player2_score ? PLAYER1 : PLAYER2),
             score_difference);
     }
-} 
+}
+
+void export_game(const std::vector<std::pair<char, std::string>>& moves, int game_mode, char player_color, int time_limit_b, int time_limit_w) {
+    // Build timestamped base filename inside games/ folder
+    auto now = std::chrono::system_clock::now();
+    std::time_t t = std::chrono::system_clock::to_time_t(now);
+    std::tm* tm_info = std::localtime(&t);
+
+    char timestamp[16];
+    std::strftime(timestamp, sizeof(timestamp), "%Y%m%d_%H%M%S", tm_info);
+
+    char date_str[20];
+    std::strftime(date_str, sizeof(date_str), "%Y-%m-%d %H:%M:%S", tm_info);
+
+    std::filesystem::create_directories("games");
+    std::string base = std::format("games/game_{}", timestamp);
+
+    std::string mode_str = game_mode == 1 ? "Player vs Player"
+                         : game_mode == 2 ? "Player vs AI"
+                         :                  "AI vs AI";
+
+    auto [b_score, w_score] = calculate_scores();
+
+    // Raw sequence file: moves concatenated on one line
+    std::ofstream raw(base + ".log");
+    for (const auto& [player, move] : moves) raw << move;
+    raw << '\n';
+
+    // Human-readable file
+    std::ofstream readable(base + ".txt");
+    readable << std::format("Othello Game Log\nDate: {}\nMode: {}\n", date_str, mode_str);
+    if (game_mode == 2)
+        readable << std::format("Player: {}\nAI time limit: {}s\n", player_name(player_color), time_limit_b);
+    else if (game_mode == 3)
+        readable << std::format("Black AI time limit: {}s\nWhite AI time limit: {}s\n", time_limit_b, time_limit_w);
+    readable << '\n';
+
+    for (int i = 0; i < (int)moves.size(); i++)
+        readable << std::format("Move {:2}: {} ({})\n", i + 1, moves[i].second, player_name(moves[i].first));
+    readable << std::format("\nBlack: {}, White: {}\n", b_score, w_score);
+    if (b_score == w_score)
+        readable << "Draw\n";
+    else if (b_score > w_score)
+        readable << std::format("Black won by {} points\n", b_score - w_score);
+    else
+        readable << std::format("White won by {} points\n", w_score - b_score);
+
+    std::cout << std::format("Game saved to {}.log and {}.txt\n", base, base);
+}

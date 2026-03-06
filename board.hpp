@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <string>
+#include <vector>
 #include "constants.hpp"
 
 std::string player_name(char player);
@@ -15,3 +16,4 @@ bool turn_skip(char player);
 std::pair<int, int> calculate_scores();
 void print_scores();
 void print_winning_message();
+void export_game(const std::vector<std::pair<char, std::string>>& moves, int game_mode, char player_color, int time_limit_b, int time_limit_w);

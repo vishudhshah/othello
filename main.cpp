@@ -6,6 +6,9 @@
 #include "input.hpp"
 #include <iostream>
 #include <format>
+#include <fstream>
+#include <ctime>
+#include <chrono>
 
 using namespace std;
 
@@ -47,8 +50,8 @@ int main() {
     // Initialize the move number
     int move_number = 0;
 
-    // History for undo: each entry stores the board state, active player, and move number before a move
-    struct Snapshot { vector<vector<char>> board; char player; int move_num; };
+    // History for undo: each entry stores the board state, active player, move number, and move made before a move
+    struct Snapshot { vector<vector<char>> board; char player; int move_num; string move; };
     vector<Snapshot> history;
 
     // Game loop
@@ -57,6 +60,13 @@ int main() {
         if (is_game_over()) {
             // Print the winning message
             print_winning_message();
+
+            // Export the game log
+            vector<pair<char, string>> moves;
+            for (const auto& s : history) moves.emplace_back(s.player, s.move);
+            char pc = (game_mode == 2) ? player_color : '\0';
+            export_game(moves, game_mode, pc, time_limit_b, time_limit_w);
+
             break;
         }
 
@@ -130,7 +140,8 @@ int main() {
         }
 
         // Save board state to history before making the move
-        history.push_back({board, current_player, move_number});
+        string move_str = {(char)('A' + col), (char)('1' + row)};
+        history.push_back({board, current_player, move_number, move_str});
 
         // Make the move
         make_move(row, col, current_player);

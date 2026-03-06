@@ -3,7 +3,6 @@
 - Puzzle mode: Input a board state (as FEN or similar) and see if the AI can solve it.
 - Display who is winning and by how much (using current and future eval score).
 - GUI.
-- Exporting games as PGN or similar.
 
 **Improvements**
 - Look into transposition tables.
