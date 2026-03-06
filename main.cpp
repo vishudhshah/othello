@@ -106,12 +106,14 @@ int main() {
                     if (history.empty()) {
                         cout << "Nothing to undo.\n";
                     } else {
-                        // In PvE, undo 2 moves (player's + AI's) to return control to the player
-                        int pops = (game_mode == 2 && (int)history.size() >= 2) ? 2 : 1;
+                        // In PvE, pop until we find the player's own snapshot (handles skipped turns)
                         Snapshot restored = history.back();
-                        for (int i = 0; i < pops; i++) {
-                            restored = history.back();
-                            history.pop_back();
+                        history.pop_back();
+                        if (game_mode == 2) {
+                            while (!history.empty() && restored.player != player_color) {
+                                restored = history.back();
+                                history.pop_back();
+                            }
                         }
                         board = restored.board;
                         current_player = restored.player;

@@ -15,12 +15,19 @@ const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
 };
 
 // Per-phase evaluation weights: {material, mobility, stability, frontier}
+// const PhaseWeights PHASE_WEIGHTS[5] = {
+//     {},                       // [0] unused
+//     {1, 200, 30,  10},        // [1] early:   mobility dominant
+//     {1, 150, 50,   5},        // [2] mid:     balanced
+//     {1,  80, 80,   0},        // [3] late:    stability dominant
+//     {1,   0,  0,   0},        // [4] endgame: raw disc count only
+// };
 const PhaseWeights PHASE_WEIGHTS[5] = {
-    {},                       // [0] unused
-    {1, 200, 30,  10},        // [1] early:   mobility dominant
-    {1, 150, 50,   5},        // [2] mid:     balanced
-    {1,  80, 80,   0},        // [3] late:    stability dominant
-    {1,   0,  0,   0},        // [4] endgame: raw disc count only
+    {},                        // [0] unused
+    {1, 150, 100,  50},        // [1] early:   mobility dominant
+    {1, 100, 100,  25},        // [2] mid:     balanced
+    {1,  75, 100,   0},        // [3] late:    stability dominant
+    {1,   0,   0,   0},        // [4] endgame: raw disc count only
 };
 
 // Weighted piece counter for endgame
