@@ -1,8 +1,10 @@
 #pragma once
 
 #include <utility>
+#include <string>
 #include "constants.hpp"
 
+std::string player_name(char player);
 void initialize_board();
 void print_board();
 void print_highlighted_board(char player);

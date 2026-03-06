@@ -18,21 +18,22 @@ using namespace std;
 int main() {
     pair<int, int> user_input;
     int row, col;
-    int time_limit = DEFAULT_TIME_LIMIT;
+    int time_limit_b = DEFAULT_TIME_LIMIT;
+    int time_limit_w = DEFAULT_TIME_LIMIT;
 
     char player_color; // Player's disk color in Player vs AI mode
 
     // Get the game mode from the user
     int game_mode = get_game_mode();
-    
-    // If the game mode involves AI, get the time limit from the user
-    if (game_mode == 2 || game_mode == 3) {
-        time_limit = get_time_limit();
 
-        // If the game mode is Player vs AI, get the disk color for the player from the user
-        if (game_mode == 2) {
-            player_color = get_disk_color();
-        }
+    if (game_mode == 2) {
+        // Player vs AI: get the time limit and the player's disk color
+        time_limit_b = time_limit_w = get_time_limit();
+        player_color = get_disk_color();
+    } else if (game_mode == 3) {
+        // AI vs AI: get separate time limits for each player
+        time_limit_b = get_time_limit("B (Black)");
+        time_limit_w = get_time_limit("W (White)");
     }
 
     // Start with PLAYER1 (Black)
@@ -61,7 +62,7 @@ int main() {
 
         // Check if the current player's turn should be skipped
         if (turn_skip(current_player)) {
-            cout << format("Player {}'s turn is skipped!\n", current_player);
+            cout << format("{}'s turn is skipped!\n", player_name(current_player));
             switch_player(current_player);
             print_highlighted_board(current_player);
             continue;
@@ -71,7 +72,7 @@ int main() {
         move_number++;
         cout << format("Move {}\n", move_number);
 
-        cout << format("Player {}'s turn.\n", current_player);
+        cout << format("{}'s turn.\n", player_name(current_player));
 
         // Handle different game modes
         if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
@@ -116,6 +117,7 @@ int main() {
             cout << '\n';
         } else {
             // AI's turn
+            int time_limit = (current_player == PLAYER1) ? time_limit_b : time_limit_w;
             pair<int, int> ai_move = predict_move(current_player, time_limit);
             row = ai_move.first;
             col = ai_move.second;

@@ -2,6 +2,10 @@
 #include <iostream>
 #include <format>
 
+std::string player_name(char player) {
+    return player == PLAYER1 ? "Black" : "White";
+}
+
 void initialize_board() {
     board[3][3] = PLAYER2;
     board[3][4] = PLAYER1;
@@ -176,7 +180,7 @@ void print_scores() {
     int player2_score = scores.second;
 
     // Print the scores of both players
-    std::cout << std::format("{}: {}, {}: {}\n", PLAYER1, player1_score, PLAYER2, player2_score);
+    std::cout << std::format("{}: {}, {}: {}\n", player_name(PLAYER1), player1_score, player_name(PLAYER2), player2_score);
 }
 
 void print_winning_message() {
@@ -192,8 +196,8 @@ void print_winning_message() {
     if (score_difference == 0) {
         std::cout << " It's a tie!\n";
     } else {
-        std::cout << std::format(" Player {} won by {} points!\n", 
-            (player1_score > player2_score ? PLAYER1 : PLAYER2), 
+        std::cout << std::format(" {} won by {} points!\n",
+            player_name(player1_score > player2_score ? PLAYER1 : PLAYER2),
             score_difference);
     }
 } 

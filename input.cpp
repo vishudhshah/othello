@@ -45,11 +45,11 @@ int get_search_depth() {
     return depth == 0 ? DEFAULT_DEPTH : depth;
 }
 
-int get_time_limit() {
+int get_time_limit(const std::string& label) {
     int time_limit;
 
     // Get the time limit from the user
-    std::cout << "Enter the time limit for AI moves (in seconds):\n";
+    std::cout << std::format("Enter the time limit for {} (in seconds):\n", label);
     std::cout << std::format("If you would like to use the default time limit ({} seconds), enter 0.\n", DEFAULT_TIME_LIMIT);
     std::cin >> time_limit;
 
