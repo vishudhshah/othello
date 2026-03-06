@@ -17,3 +17,7 @@ extern const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE];
 
 // Weighted piece counter for endgame
 extern const int ENDGAME_WEIGHTS[BOARD_SIZE][BOARD_SIZE];
+
+// Per-phase evaluation weights
+struct PhaseWeights { int material, mobility, stability, frontier; };
+extern const PhaseWeights PHASE_WEIGHTS[5];

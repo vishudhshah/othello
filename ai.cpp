@@ -33,74 +33,184 @@ int game_phase() {
     }
 }
 
-int evaluate_board(char player) {
-    // Initialize counters
-    int player1_score = 0;
-    int player2_score = 0;
-    int num_valid_moves = 0;
+// Compute stable discs for a player and write into stable[8][8].
+// A disc is stable if it cannot be flipped for the rest of the game.
+static void compute_stable(char player, bool stable[8][8]) {
+    for (int i = 0; i < BOARD_SIZE; i++)
+        for (int j = 0; j < BOARD_SIZE; j++)
+            stable[i][j] = false;
 
-    // Determine the game phase
-    int phase = game_phase();
+    // Pass 1: corners
+    const int corners[4][2] = {{0,0},{0,7},{7,0},{7,7}};
+    for (auto& c : corners)
+        if (board[c[0]][c[1]] == player)
+            stable[c[0]][c[1]] = true;
 
-    // Iterate through all cells in the board
+    // Pass 2: edges — propagate from stable corners along each edge
+    // Top / bottom rows
+    for (int row : {0, 7}) {
+        for (int j = 1; j < BOARD_SIZE; j++)
+            if (board[row][j] == player && stable[row][j-1])
+                stable[row][j] = true;
+        for (int j = BOARD_SIZE - 2; j >= 0; j--)
+            if (board[row][j] == player && stable[row][j+1])
+                stable[row][j] = true;
+    }
+    // Left / right columns
+    for (int col : {0, 7}) {
+        for (int i = 1; i < BOARD_SIZE; i++)
+            if (board[i][col] == player && stable[i-1][col])
+                stable[i][col] = true;
+        for (int i = BOARD_SIZE - 2; i >= 0; i--)
+            if (board[i][col] == player && stable[i+1][col])
+                stable[i][col] = true;
+    }
+
+    // Pass 3: interior — fixpoint iteration
+    // A disc is stable if, in all 4 axes, it is bounded on both sides by a wall or stable disc.
+    static const int axes[4][2] = {{0,1},{1,0},{1,1},{1,-1}};
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (int i = 0; i < BOARD_SIZE; i++) {
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                if (board[i][j] != player || stable[i][j]) continue;
+                bool all_ok = true;
+                for (auto& ax : axes) {
+                    int dr = ax[0], dc = ax[1];
+                    // Check both directions along this axis
+                    bool ok_neg = false, ok_pos = false;
+                    // negative direction
+                    int r = i - dr, c = j - dc;
+                    while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                        if (stable[r][c]) { ok_neg = true; break; }
+                        r -= dr; c -= dc;
+                    }
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_neg = true; // hit wall
+                    // positive direction
+                    r = i + dr; c = j + dc;
+                    while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                        if (stable[r][c]) { ok_pos = true; break; }
+                        r += dr; c += dc;
+                    }
+                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_pos = true; // hit wall
+                    if (!ok_neg || !ok_pos) { all_ok = false; break; }
+                }
+                if (all_ok) { stable[i][j] = true; changed = true; }
+            }
+        }
+    }
+}
+
+static int count_stable_discs(char player) {
+    bool stable[8][8];
+    compute_stable(player, stable);
+    int count = 0;
+    for (int i = 0; i < BOARD_SIZE; i++)
+        for (int j = 0; j < BOARD_SIZE; j++)
+            if (stable[i][j]) count++;
+    return count;
+}
+
+// Returns a correction to position-weight score for danger squares (X/C-squares)
+// when the adjacent corner is already owned by piece_player.
+static int dynamic_danger_correction(char piece_player) {
+    struct DangerSquare { int r, c, cr, cc, base_penalty, corrected_bonus; };
+    static const DangerSquare DANGER_SQUARES[] = {
+        // X-squares (base -100, bonus +20 if corner is yours)
+        {1,1, 0,0, -100, 20}, {1,6, 0,7, -100, 20},
+        {6,1, 7,0, -100, 20}, {6,6, 7,7, -100, 20},
+        // C-squares (base -10, bonus +5 if corner is yours)
+        {0,1, 0,0, -10,  5}, {1,0, 0,0, -10,  5},
+        {0,6, 0,7, -10,  5}, {1,7, 0,7, -10,  5},
+        {7,1, 7,0, -10,  5}, {6,0, 7,0, -10,  5},
+        {7,6, 7,7, -10,  5}, {6,7, 7,7, -10,  5},
+    };
+    int correction = 0;
+    for (const auto& ds : DANGER_SQUARES) {
+        if (board[ds.r][ds.c] == piece_player && board[ds.cr][ds.cc] == piece_player) {
+            // undo the static penalty and apply a positive bonus
+            correction += ds.corrected_bonus - ds.base_penalty;
+        }
+    }
+    return correction;
+}
+
+static int count_frontier_discs(char player) {
+    static const int dirs[8][2] = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}};
+    int count = 0;
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
-            // Count the number of valid moves for the opponent (for mobility)
-            if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
-                num_valid_moves++;
-            }
-
-            // Calculate the score for each player based on the position weights and game phase
-            if (board[i][j] == PLAYER1) {
-                switch (phase) {
-                    case 1:
-                        player1_score += POSITION_WEIGHTS[i][j];
-                        break;
-                    case 2:
-                        player1_score += POSITION_WEIGHTS[i][j];
-                        break;
-                    case 3:
-                        player1_score += ENDGAME_WEIGHTS[i][j];
-                        break;
-                    case 4:
-                        player1_score += 1;
-                        break;
-                    default:
-                        break;
-                }
-            } else if (board[i][j] == PLAYER2) {
-                switch (phase) {
-                    case 1:
-                        player2_score += POSITION_WEIGHTS[i][j];
-                        break;
-                    case 2:
-                        player2_score += POSITION_WEIGHTS[i][j];
-                        break;
-                    case 3:
-                        player2_score += ENDGAME_WEIGHTS[i][j];
-                        break;
-                    case 4:
-                        player2_score += 1;
-                        break;
-                    default:
-                        break;
+            if (board[i][j] != player) continue;
+            for (auto& d : dirs) {
+                int ni = i + d[0], nj = j + d[1];
+                if (ni >= 0 && ni < BOARD_SIZE && nj >= 0 && nj < BOARD_SIZE && board[ni][nj] == EMPTY) {
+                    count++;
+                    break;
                 }
             }
         }
     }
+    return count;
+}
 
-    // Calculate the material score and mobility score for the current player
-    int material_score = player == PLAYER1 ? player1_score - player2_score : player2_score - player1_score;
-    int mobility_score = 10 * num_valid_moves;
+int evaluate_board(char player) {
+    int phase = game_phase();
+    char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
-    // Return the final evaluation score for the current player
-    if (phase == 1 || phase == 2 || phase == 3) {
-        // In the early and mid-game, return the material score plus mobility score
-        return material_score + mobility_score;
-    } else {
-        // In the endgame, return only the material score
-        return material_score;
+    // Phase 4: raw disc count only
+    if (phase == 4) {
+        int p1 = 0, p2 = 0;
+        for (int i = 0; i < BOARD_SIZE; i++)
+            for (int j = 0; j < BOARD_SIZE; j++) {
+                if (board[i][j] == PLAYER1) p1++;
+                else if (board[i][j] == PLAYER2) p2++;
+            }
+        return (player == PLAYER1) ? p1 - p2 : p2 - p1;
     }
+
+    const PhaseWeights& w = PHASE_WEIGHTS[phase];
+
+    // Single loop: position weights + mobility counts
+    int player1_pos = 0, player2_pos = 0;
+    int player_moves = 0, opponent_moves = 0;
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j] == EMPTY) {
+                if (is_valid_move(i, j, player))   player_moves++;
+                if (is_valid_move(i, j, opponent)) opponent_moves++;
+            } else if (board[i][j] == PLAYER1) {
+                player1_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
+            } else if (board[i][j] == PLAYER2) {
+                player2_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
+            }
+        }
+    }
+
+    // Dynamic danger correction: undo static penalties for X/C-squares when corner is owned
+    player1_pos += dynamic_danger_correction(PLAYER1);
+    player2_pos += dynamic_danger_correction(PLAYER2);
+
+    int material = (player == PLAYER1) ? player1_pos - player2_pos : player2_pos - player1_pos;
+
+    // Relative mobility in [-100, +100]
+    int total_moves = player_moves + opponent_moves;
+    int mobility = (total_moves > 0) ? (100 * (player_moves - opponent_moves)) / total_moves : 0;
+
+    int p1_stable = count_stable_discs(PLAYER1);
+    int p2_stable = count_stable_discs(PLAYER2);
+    int stability = (player == PLAYER1) ? p1_stable - p2_stable : p2_stable - p1_stable;
+
+    int frontier = 0;
+    if (w.frontier != 0) {
+        // Fewer frontier discs is better (less vulnerable)
+        frontier = count_frontier_discs(opponent) - count_frontier_discs(player);
+    }
+
+    return w.material * material
+         + w.mobility * mobility
+         + w.stability * stability
+         + w.frontier * frontier;
 }
 
 std::vector<std::pair<int, int>> get_sorted_moves(char player) {
@@ -258,7 +368,7 @@ std::pair<int, int> predict_move(char player, int time_limit) {
             make_move(move.first, move.second, player);
 
             // Call negamax to predict the score
-            int score = -negamax(current_depth, std::numeric_limits<int>::min(), std::numeric_limits<int>::max(), opponent);
+            int score = -negamax(current_depth, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
 
             // Undo the move
             board = board_copy;
