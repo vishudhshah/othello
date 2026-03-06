@@ -46,6 +46,10 @@ int main() {
     // Initialize the move number
     int move_number = 0;
 
+    // History for undo: each entry stores the board state, active player, and move number before a move
+    struct Snapshot { vector<vector<char>> board; char player; int move_num; };
+    vector<Snapshot> history;
+
     // Game loop
     for (;;) {
         // Check if the game is over
@@ -72,17 +76,43 @@ int main() {
         // Handle different game modes
         if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
             // PvP or PvE (Player's turn)
+            bool did_undo = false;
             user_input = get_user_input();
             row = user_input.first;
             col = user_input.second;
 
-            // Validate the user input
-            while (!is_valid_move(row, col, current_player)) {
-                cout << "Please see the valid moves highlighted!\n";
+            while (true) {
+                if (row == -1) {
+                    // Undo requested
+                    if (history.empty()) {
+                        cout << "Nothing to undo.\n";
+                    } else {
+                        // In PvE, undo 2 moves (player's + AI's) to return control to the player
+                        int pops = (game_mode == 2 && (int)history.size() >= 2) ? 2 : 1;
+                        Snapshot restored = history.back();
+                        for (int i = 0; i < pops; i++) {
+                            restored = history.back();
+                            history.pop_back();
+                        }
+                        board = restored.board;
+                        current_player = restored.player;
+                        move_number = restored.move_num - 1; // -1 so loop's ++ restores correct number
+                        did_undo = true;
+                    }
+                    print_highlighted_board(current_player);
+                    cout << '\n';
+                    if (did_undo) break;
+                } else if (is_valid_move(row, col, current_player)) {
+                    break;
+                } else {
+                    cout << "Please see the valid moves highlighted!\n";
+                }
                 user_input = get_user_input();
                 row = user_input.first;
                 col = user_input.second;
             }
+
+            if (did_undo) continue;
             cout << '\n';
         } else {
             // AI's turn
@@ -96,6 +126,9 @@ int main() {
             
             cout << format("AI plays: {}{}\n\n", col_char, row_char);
         }
+
+        // Save board state to history before making the move
+        history.push_back({board, current_player, move_number});
 
         // Make the move
         make_move(row, col, current_player);

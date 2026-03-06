@@ -1,8 +1,7 @@
 **Features**
 - Save best predicted scores and display line graph at end of game.
 - Puzzle mode: Input a board state (as FEN?) and see if the AI can solve it.
-- In AI vs AI mode, allow different search depths.
-- Allow going back a move – keep a record of the board state before/after every move.
+- In AI vs AI mode, allow different search depths / time limits.
 - Display who is winning and by how much (using current and future eval score).
 - GUI.
 - Exporting games as PGN.
