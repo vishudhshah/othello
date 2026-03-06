@@ -1,4 +1,5 @@
 #include "input.hpp"
+#include "board.hpp"
 #include <iostream>
 #include <limits>
 #include <format>
@@ -11,11 +12,12 @@ int get_game_mode() {
     std::cout << "Enter the mode of the game:\n"
         << "1. Player vs Player\n"
         << "2. Player vs AI\n"
-        << "3. AI vs AI\n";
+        << "3. AI vs AI\n"
+        << "4. Puzzle Mode\n";
     std::cin >> mode;
 
     // Validate the user input
-    while (std::cin.fail() || mode < 1 || mode > 3) {
+    while (std::cin.fail() || mode < 1 || mode > 4) {
         std::cin.clear(); // Clear error flags
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore rest of the line
         std::cout << "Please enter a valid game mode.\n";
@@ -115,4 +117,56 @@ void switch_player(char &currentPlayer) {
 
 char get_opponent(char player) {
     return (player == PLAYER1) ? PLAYER2 : PLAYER1;
-} 
+}
+
+std::pair<char, std::string> setup_puzzle_board() {
+    // Ask for input format
+    int fmt;
+    std::cout << "Choose board input format:\n"
+              << "1. FEN-like string    (e.g. 8/8/8/3WB3/3BW3/8/8/8)\n"
+              << "2. 64-character string (e.g. ...........................WB......BW...........................)\n";
+    std::cin >> fmt;
+    while (std::cin.fail() || fmt < 1 || fmt > 2) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "Please enter 1 or 2.\n";
+        std::cin >> fmt;
+    }
+    std::cout << '\n';
+
+    // Ask for board string and validate
+    std::string board_str;
+    if (fmt == 1) {
+        std::cout << "Enter FEN-like board string:\n";
+        std::cin >> board_str;
+        while (!parse_fen(board_str)) {
+            std::cout << "Invalid FEN string. Rows are separated by /, each must sum to exactly 8 cells.\n"
+                      << "Valid characters: B/b (Black), W/w (White), 1-8 (empty cells).\n"
+                      << "Enter FEN-like board string:\n";
+            std::cin >> board_str;
+        }
+    } else {
+        std::cout << "Enter 64-character board string:\n";
+        std::cin >> board_str;
+        while (!parse_64char(board_str)) {
+            std::cout << "Invalid string. Must be exactly 64 characters using only B/b (Black), W/w (White), or . (empty).\n"
+                      << "Enter 64-character board string:\n";
+            std::cin >> board_str;
+        }
+    }
+    std::cout << '\n';
+
+    // Ask whose turn it is
+    char starting_player;
+    std::cout << "Whose turn is it? (B/b for Black, W/w for White):\n";
+    std::cin >> starting_player;
+    while (starting_player != 'B' && starting_player != 'b' &&
+           starting_player != 'W' && starting_player != 'w') {
+        std::cout << "Please enter B/b or W/w:\n";
+        std::cin >> starting_player;
+    }
+    std::cout << '\n';
+
+    for (char& c : board_str) c = std::toupper(c);
+    return {(char)std::toupper(starting_player), board_str};
+}

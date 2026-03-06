@@ -1,7 +1,6 @@
 **Features**
+- Display who is winning and by how much (some function using current and future eval score).
 - Save best predicted scores and display line graph at end of game.
-- Puzzle mode: Input a board state (as FEN or similar) and see if the AI can solve it.
-- Display who is winning and by how much (using current and future eval score).
 - GUI.
 
 **Improvements**

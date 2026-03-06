@@ -17,6 +17,45 @@ void initialize_board() {
     board[4][4] = PLAYER2;
 }
 
+bool parse_fen(const std::string& fen) {
+    // Split on '/' and validate exactly 8 rows
+    std::vector<std::string> rows;
+    std::string current;
+    for (char c : fen) {
+        if (c == '/') { rows.push_back(current); current.clear(); }
+        else           { current += c; }
+    }
+    rows.push_back(current);
+
+    if ((int)rows.size() != BOARD_SIZE) return false;
+
+    for (int r = 0; r < BOARD_SIZE; r++) {
+        int col = 0;
+        for (char c : rows[r]) {
+            if      (c == 'B' || c == 'b') { if (col >= BOARD_SIZE) return false; board[r][col++] = PLAYER1; }
+            else if (c == 'W' || c == 'w') { if (col >= BOARD_SIZE) return false; board[r][col++] = PLAYER2; }
+            else if (c >= '1' && c <= '8') { int n = c - '0'; if (col + n > BOARD_SIZE) return false;
+                                             for (int k = 0; k < n; k++) board[r][col++] = EMPTY; }
+            else return false; // unknown character
+        }
+        if (col != BOARD_SIZE) return false; // row didn't sum to 8
+    }
+    return true;
+}
+
+bool parse_64char(const std::string& s) {
+    if ((int)s.length() != BOARD_SIZE * BOARD_SIZE) return false;
+
+    for (int i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+        char c = s[i];
+        if      (c == 'B' || c == 'b') board[i / BOARD_SIZE][i % BOARD_SIZE] = PLAYER1;
+        else if (c == 'W' || c == 'w') board[i / BOARD_SIZE][i % BOARD_SIZE] = PLAYER2;
+        else if (c == '.')             board[i / BOARD_SIZE][i % BOARD_SIZE] = EMPTY;
+        else return false; // unknown character
+    }
+    return true;
+}
+
 void print_board() {
     char column_labels[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'};
 
@@ -206,7 +245,7 @@ void print_winning_message() {
     }
 }
 
-void export_game(const std::vector<std::pair<char, std::string>>& moves, int game_mode, char player_color, int time_limit_b, int time_limit_w) {
+void export_game(const std::vector<std::pair<char, std::string>>& moves, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos) {
     // Build timestamped base filename inside games/ folder
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
@@ -223,7 +262,8 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, int gam
 
     std::string mode_str = game_mode == 1 ? "Player vs Player"
                          : game_mode == 2 ? "Player vs AI"
-                         :                  "AI vs AI";
+                         : game_mode == 3 ? "AI vs AI"
+                         :                  "Puzzle Mode";
 
     auto [b_score, w_score] = calculate_scores();
 
@@ -239,6 +279,8 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, int gam
         readable << std::format("Player: {}\nAI time limit: {}s\n", player_name(player_color), time_limit_b);
     else if (game_mode == 3)
         readable << std::format("Black AI time limit: {}s\nWhite AI time limit: {}s\n", time_limit_b, time_limit_w);
+    else if (game_mode == 4)
+        readable << std::format("Starting position: {}\nAI time limit: {}s\n", start_pos, time_limit_b);
     readable << '\n';
 
     for (int i = 0; i < (int)moves.size(); i++)

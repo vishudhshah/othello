@@ -25,9 +25,13 @@ int main() {
     int time_limit_w = DEFAULT_TIME_LIMIT;
 
     char player_color; // Player's disk color in Player vs AI mode
+    string start_pos;  // Starting position string in puzzle mode
 
     // Get the game mode from the user
     int game_mode = get_game_mode();
+
+    // Start with PLAYER1 (Black); may be overridden by puzzle mode
+    char current_player = PLAYER1;
 
     if (game_mode == 2) {
         // Player vs AI: get the time limit and the player's disk color
@@ -37,13 +41,17 @@ int main() {
         // AI vs AI: get separate time limits for each player
         time_limit_b = get_time_limit("B (Black)");
         time_limit_w = get_time_limit("W (White)");
+    } else if (game_mode == 4) {
+        // Puzzle mode: load custom board and let AI play both sides
+        auto [sp, pos] = setup_puzzle_board();
+        current_player = sp;
+        start_pos = pos;
+        time_limit_b = time_limit_w = get_time_limit();
     }
 
-    // Start with PLAYER1 (Black)
-    char current_player = PLAYER1;
-
-    // Initialize and print the starting board
-    initialize_board();
+    // Initialize the standard starting board (skipped in puzzle mode — board already set)
+    if (game_mode != 4)
+        initialize_board();
     print_highlighted_board(current_player);
     cout << '\n';
 
@@ -65,7 +73,7 @@ int main() {
             vector<pair<char, string>> moves;
             for (const auto& s : history) moves.emplace_back(s.player, s.move);
             char pc = (game_mode == 2) ? player_color : '\0';
-            export_game(moves, game_mode, pc, time_limit_b, time_limit_w);
+            export_game(moves, game_mode, pc, time_limit_b, time_limit_w, start_pos);
 
             break;
         }
