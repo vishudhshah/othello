@@ -3,6 +3,7 @@
 - Display who is winning and by how much (some function using current and future eval score).
 - Save best predicted scores and display line graph at end of game.
 - GUI.
+- Display black/white disks using nerd fonts, glyphs, or similar (if available).
 
 **Improvements**
 - Look into transposition tables.
