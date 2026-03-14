@@ -91,17 +91,19 @@ std::pair<int, int> get_user_input() {
     int row, col;
 
     // Get user input
-    std::cout << "Enter your move (eg. A1 or a1), or U to undo: ";
+    std::cout << "Enter your move (eg. A1 or a1), U to undo, or R to resign: ";
     std::cin >> user_input;
 
-    // Check for undo
+    // Check for undo or resign
     if (user_input == "u" || user_input == "U") return {-1, -1};
+    if (user_input == "r" || user_input == "R") return {-2, -2};
 
     // Validate the user input
     while (user_input.length() != 2 || user_input[0] < 'A' || (user_input[0] > 'H' && user_input[0] < 'a') || user_input[0] > 'h' || user_input[1] < '1' || user_input[1] > '8') {
-        std::cout << "Please enter a valid move (eg. A1 or a1), or U to undo: ";
+        std::cout << "Please enter a valid move (eg. A1 or a1), U to undo, or R to resign: ";
         std::cin >> user_input;
         if (user_input == "u" || user_input == "U") return {-1, -1};
+        if (user_input == "r" || user_input == "R") return {-2, -2};
     }
 
     // Convert the user input to row and column

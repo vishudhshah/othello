@@ -101,7 +101,16 @@ int main() {
             col = user_input.second;
 
             while (true) {
-                if (row == -1) {
+                if (row == -2) {
+                    // Resign requested
+                    char winner = (current_player == PLAYER1) ? PLAYER2 : PLAYER1;
+                    cout << format("{} resigns. {} wins!\n", player_name(current_player), player_name(winner));
+                    vector<pair<char, string>> moves;
+                    for (const auto& s : history) moves.emplace_back(s.player, s.move);
+                    char pc = (game_mode == 2) ? player_color : '\0';
+                    export_game(moves, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
+                    return 0;
+                } else if (row == -1) {
                     // Undo requested
                     if (history.empty()) {
                         cout << "Nothing to undo.\n";

@@ -245,7 +245,7 @@ void print_winning_message() {
     }
 }
 
-void export_game(const std::vector<std::pair<char, std::string>>& moves, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos) {
+void export_game(const std::vector<std::pair<char, std::string>>& moves, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
     // Build timestamped base filename inside games/ folder
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
@@ -286,7 +286,10 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, int gam
     for (int i = 0; i < (int)moves.size(); i++)
         readable << std::format("Move {:2}: {} ({})\n", i + 1, moves[i].second, player_name(moves[i].first));
     readable << std::format("\nBlack: {}, White: {}\n", b_score, w_score);
-    if (b_score == w_score)
+    if (resigned_by != '\0') {
+        char winner = (resigned_by == PLAYER1) ? PLAYER2 : PLAYER1;
+        readable << std::format("{} resigned, {} wins\n", player_name(resigned_by), player_name(winner));
+    } else if (b_score == w_score)
         readable << "Draw\n";
     else if (b_score > w_score)
         readable << std::format("Black won by {} points\n", b_score - w_score);
