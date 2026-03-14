@@ -15,6 +15,10 @@ const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
 };
 
 // Per-phase evaluation weights: {material, mobility, stability, frontier}
+    // material: raw disc count difference
+    // mobility: number of legal moves available to player
+    // stability: number of stable discs (discs that cannot be flipped)
+    // frontier: number of discs adjacent to empty squares (less is better)
 // const PhaseWeights PHASE_WEIGHTS[5] = {
 //     {},                       // [0] unused
 //     {1, 200, 30,  10},        // [1] early:   mobility dominant
