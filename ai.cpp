@@ -368,7 +368,7 @@ std::pair<int, int> predict_move(char player, int time_limit) {
             Board board_copy = board;
             make_move(move.first, move.second, player);
 
-            // Call negamax to predict the score
+            // Call negascout to predict the score
             int score = -negascout(current_depth, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
 
             // Undo the move
