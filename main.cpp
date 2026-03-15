@@ -59,7 +59,7 @@ int main() {
     int move_number = 0;
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { vector<vector<char>> board; char player; int move_num; string move; };
+    struct Snapshot { Board board; char player; int move_num; string move; };
     vector<Snapshot> history;
 
     // Game loop

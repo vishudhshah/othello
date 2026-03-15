@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <array>
 #include <utility>
 
 const int BOARD_SIZE = 8;
@@ -11,7 +11,8 @@ const char PLAYER2 = 'W';
 const int DEFAULT_DEPTH = 5;
 const int DEFAULT_TIME_LIMIT = 5;
 
-extern std::vector<std::vector<char>> board;
+using Board = std::array<std::array<char, BOARD_SIZE>, BOARD_SIZE>;
+extern Board board;
 extern std::pair<int,int> last_move;
 
 // Weighted piece counter for the evaluation function

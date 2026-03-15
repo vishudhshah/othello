@@ -1,6 +1,10 @@
 #include "constants.hpp"
 
-std::vector<std::vector<char>> board(BOARD_SIZE, std::vector<char>(BOARD_SIZE, EMPTY));
+Board board = [] {
+    Board b;
+    for (auto& row : b) row.fill(EMPTY);
+    return b;
+}();
 std::pair<int,int> last_move = {-1, -1};
 
 // Weighted piece counter for the evaluation function

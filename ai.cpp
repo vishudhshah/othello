@@ -33,40 +33,39 @@ int game_phase() {
     }
 }
 
-// Compute stable discs for a player and write into stable[8][8].
+// Compute stable disc counts for both players in one pass.
 // A disc is stable if it cannot be flipped for the rest of the game.
-static void compute_stable(char player, bool stable[8][8]) {
-    for (int i = 0; i < BOARD_SIZE; i++)
-        for (int j = 0; j < BOARD_SIZE; j++)
-            stable[i][j] = false;
+// Returns {player1_stable, player2_stable}.
+static std::pair<int,int> count_stable_both() {
+    bool stable[2][8][8] = {};  // [0]=PLAYER1, [1]=PLAYER2
+    const char players[2] = {PLAYER1, PLAYER2};
 
     // Pass 1: corners
     const int corners[4][2] = {{0,0},{0,7},{7,0},{7,7}};
     for (auto& c : corners)
-        if (board[c[0]][c[1]] == player)
-            stable[c[0]][c[1]] = true;
+        for (int p = 0; p < 2; p++)
+            if (board[c[0]][c[1]] == players[p])
+                stable[p][c[0]][c[1]] = true;
 
     // Pass 2: edges — propagate from stable corners along each edge
-    // Top / bottom rows
     for (int row : {0, 7}) {
-        for (int j = 1; j < BOARD_SIZE; j++)
-            if (board[row][j] == player && stable[row][j-1])
-                stable[row][j] = true;
-        for (int j = BOARD_SIZE - 2; j >= 0; j--)
-            if (board[row][j] == player && stable[row][j+1])
-                stable[row][j] = true;
+        for (int p = 0; p < 2; p++) {
+            for (int j = 1; j < BOARD_SIZE; j++)
+                if (board[row][j] == players[p] && stable[p][row][j-1]) stable[p][row][j] = true;
+            for (int j = BOARD_SIZE - 2; j >= 0; j--)
+                if (board[row][j] == players[p] && stable[p][row][j+1]) stable[p][row][j] = true;
+        }
     }
-    // Left / right columns
     for (int col : {0, 7}) {
-        for (int i = 1; i < BOARD_SIZE; i++)
-            if (board[i][col] == player && stable[i-1][col])
-                stable[i][col] = true;
-        for (int i = BOARD_SIZE - 2; i >= 0; i--)
-            if (board[i][col] == player && stable[i+1][col])
-                stable[i][col] = true;
+        for (int p = 0; p < 2; p++) {
+            for (int i = 1; i < BOARD_SIZE; i++)
+                if (board[i][col] == players[p] && stable[p][i-1][col]) stable[p][i][col] = true;
+            for (int i = BOARD_SIZE - 2; i >= 0; i--)
+                if (board[i][col] == players[p] && stable[p][i+1][col]) stable[p][i][col] = true;
+        }
     }
 
-    // Pass 3: interior — fixpoint iteration
+    // Pass 3: interior — fixpoint iteration, both players simultaneously
     // A disc is stable if, in all 4 axes, it is bounded on both sides by a wall or stable disc.
     static const int axes[4][2] = {{0,1},{1,0},{1,1},{1,-1}};
     bool changed = true;
@@ -74,42 +73,39 @@ static void compute_stable(char player, bool stable[8][8]) {
         changed = false;
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
-                if (board[i][j] != player || stable[i][j]) continue;
-                bool all_ok = true;
-                for (auto& ax : axes) {
-                    int dr = ax[0], dc = ax[1];
-                    // Check both directions along this axis
-                    bool ok_neg = false, ok_pos = false;
-                    // negative direction
-                    int r = i - dr, c = j - dc;
-                    while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-                        if (stable[r][c]) { ok_neg = true; break; }
-                        r -= dr; c -= dc;
+                for (int p = 0; p < 2; p++) {
+                    if (board[i][j] != players[p] || stable[p][i][j]) continue;
+                    bool all_ok = true;
+                    for (auto& ax : axes) {
+                        int dr = ax[0], dc = ax[1];
+                        bool ok_neg = false, ok_pos = false;
+                        int r = i - dr, c = j - dc;
+                        while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                            if (stable[p][r][c]) { ok_neg = true; break; }
+                            r -= dr; c -= dc;
+                        }
+                        if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_neg = true;
+                        r = i + dr; c = j + dc;
+                        while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                            if (stable[p][r][c]) { ok_pos = true; break; }
+                            r += dr; c += dc;
+                        }
+                        if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_pos = true;
+                        if (!ok_neg || !ok_pos) { all_ok = false; break; }
                     }
-                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_neg = true; // hit wall
-                    // positive direction
-                    r = i + dr; c = j + dc;
-                    while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-                        if (stable[r][c]) { ok_pos = true; break; }
-                        r += dr; c += dc;
-                    }
-                    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_pos = true; // hit wall
-                    if (!ok_neg || !ok_pos) { all_ok = false; break; }
+                    if (all_ok) { stable[p][i][j] = true; changed = true; }
                 }
-                if (all_ok) { stable[i][j] = true; changed = true; }
             }
         }
     }
-}
 
-static int count_stable_discs(char player) {
-    bool stable[8][8];
-    compute_stable(player, stable);
-    int count = 0;
+    int c1 = 0, c2 = 0;
     for (int i = 0; i < BOARD_SIZE; i++)
-        for (int j = 0; j < BOARD_SIZE; j++)
-            if (stable[i][j]) count++;
-    return count;
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            c1 += stable[0][i][j];
+            c2 += stable[1][i][j];
+        }
+    return {c1, c2};
 }
 
 // Returns a correction to position-weight score for danger squares (X/C-squares)
@@ -154,8 +150,7 @@ static int count_frontier_discs(char player) {
     return count;
 }
 
-int evaluate_board(char player) {
-    int phase = game_phase();
+int evaluate_board(char player, int phase) {
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
     // Phase 4: raw disc count only
@@ -197,8 +192,7 @@ int evaluate_board(char player) {
     int total_moves = player_moves + opponent_moves;
     int mobility = (total_moves > 0) ? (100 * (player_moves - opponent_moves)) / total_moves : 0;
 
-    int p1_stable = count_stable_discs(PLAYER1);
-    int p2_stable = count_stable_discs(PLAYER2);
+    auto [p1_stable, p2_stable] = count_stable_both();
     int stability = (player == PLAYER1) ? p1_stable - p2_stable : p2_stable - p1_stable;
 
     int frontier = 0;
@@ -265,17 +259,17 @@ int negamax(int depth, int alpha, int beta, char player) {
             int player2_score = scores.second;
 
             if (player1_score > player2_score) {
-                return (player == PLAYER1) ? (1000000 + evaluate_board(player)) : -(1000000 + evaluate_board(opponent));
+                return (player == PLAYER1) ? (1000000 + evaluate_board(player, phase)) : -(1000000 + evaluate_board(opponent, phase));
             } else if (player2_score > player1_score) {
-                return (player == PLAYER2) ? (1000000 + evaluate_board(player)) : -(1000000 + evaluate_board(opponent));
+                return (player == PLAYER2) ? (1000000 + evaluate_board(player, phase)) : -(1000000 + evaluate_board(opponent, phase));
             } else {
                 return 0;
             }
         } else if (depth == 0) {
-            return evaluate_board(player);
+            return evaluate_board(player, phase);
         }
     } else if (depth == 0 || is_game_over()) {
-        return evaluate_board(player);
+        return evaluate_board(player, phase);
     }
 
     // Initialize the best score
@@ -295,7 +289,7 @@ int negamax(int depth, int alpha, int beta, char player) {
         int j = move.second;
 
         // Make a copy of the board and simulate the move
-        std::vector<std::vector<char>> board_copy = board;
+        Board board_copy = board;
         make_move(i, j, player);
 
         // Recursively update the score by calling negamax for the opponent
@@ -364,7 +358,7 @@ std::pair<int, int> predict_move(char player, int time_limit) {
             }
 
             // Make a copy of the board and simulate the move
-            std::vector<std::vector<char>> board_copy = board;
+            Board board_copy = board;
             make_move(move.first, move.second, player);
 
             // Call negamax to predict the score
