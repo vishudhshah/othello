@@ -20,13 +20,13 @@ int game_phase() {
 
     // Determine the game phase based on the total number of discs
     switch (total_discs) {
-        case 4 ... 20:
+        case 4 ... BOARD_SIZE * BOARD_SIZE / 3:
             return 1;
-        case 21 ... 48:
+        case BOARD_SIZE * BOARD_SIZE / 3 + 1 ... BOARD_SIZE * BOARD_SIZE * 3 / 4:
             return 2;
-        case 49 ... 60:
+        case BOARD_SIZE * BOARD_SIZE * 3 / 4 + 1 ... BOARD_SIZE * BOARD_SIZE - 4:
             return 3;
-        case 61 ... 64:
+        case BOARD_SIZE * BOARD_SIZE - 3 ... BOARD_SIZE * BOARD_SIZE:
             return 4;
         default:
             return 0;
@@ -37,18 +37,18 @@ int game_phase() {
 // A disc is stable if it cannot be flipped for the rest of the game.
 // Returns {player1_stable, player2_stable}.
 static std::pair<int,int> count_stable_both() {
-    bool stable[2][8][8] = {};  // [0]=PLAYER1, [1]=PLAYER2
+    bool stable[2][BOARD_SIZE][BOARD_SIZE] = {};  // [0]=PLAYER1, [1]=PLAYER2
     const char players[2] = {PLAYER1, PLAYER2};
 
     // Pass 1: corners
-    const int corners[4][2] = {{0,0},{0,7},{7,0},{7,7}};
+    const int corners[4][2] = {{0,0},{0,BOARD_SIZE-1},{BOARD_SIZE-1,0},{BOARD_SIZE-1,BOARD_SIZE-1}};
     for (auto& c : corners)
         for (int p = 0; p < 2; p++)
             if (board[c[0]][c[1]] == players[p])
                 stable[p][c[0]][c[1]] = true;
 
     // Pass 2: edges — propagate from stable corners along each edge
-    for (int row : {0, 7}) {
+    for (int row : {0, BOARD_SIZE-1}) {
         for (int p = 0; p < 2; p++) {
             for (int j = 1; j < BOARD_SIZE; j++)
                 if (board[row][j] == players[p] && stable[p][row][j-1]) stable[p][row][j] = true;
@@ -56,7 +56,7 @@ static std::pair<int,int> count_stable_both() {
                 if (board[row][j] == players[p] && stable[p][row][j+1]) stable[p][row][j] = true;
         }
     }
-    for (int col : {0, 7}) {
+    for (int col : {0, BOARD_SIZE-1}) {
         for (int p = 0; p < 2; p++) {
             for (int i = 1; i < BOARD_SIZE; i++)
                 if (board[i][col] == players[p] && stable[p][i-1][col]) stable[p][i][col] = true;

@@ -13,10 +13,10 @@ std::string player_name(char player) {
 }
 
 void initialize_board() {
-    board[3][3] = PLAYER2;
-    board[3][4] = PLAYER1;
-    board[4][3] = PLAYER1;
-    board[4][4] = PLAYER2;
+    board[BOARD_SIZE/2 - 1][BOARD_SIZE/2 - 1] = PLAYER2;
+    board[BOARD_SIZE/2 - 1][BOARD_SIZE/2]     = PLAYER1;
+    board[BOARD_SIZE/2]    [BOARD_SIZE/2 - 1] = PLAYER1;
+    board[BOARD_SIZE/2]    [BOARD_SIZE/2]     = PLAYER2;
 }
 
 bool parse_fen(const std::string& fen) {
@@ -36,7 +36,7 @@ bool parse_fen(const std::string& fen) {
         for (char c : rows[r]) {
             if      (c == 'B' || c == 'b') { if (col >= BOARD_SIZE) return false; board[r][col++] = PLAYER1; }
             else if (c == 'W' || c == 'w') { if (col >= BOARD_SIZE) return false; board[r][col++] = PLAYER2; }
-            else if (c >= '1' && c <= '8') { int n = c - '0'; if (col + n > BOARD_SIZE) return false;
+            else if (c >= '1' && c <= '0' + BOARD_SIZE) { int n = c - '0'; if (col + n > BOARD_SIZE) return false;
                                              for (int k = 0; k < n; k++) board[r][col++] = EMPTY; }
             else return false; // unknown character
         }
