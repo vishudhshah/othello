@@ -245,7 +245,7 @@ std::vector<std::pair<int, int>> get_sorted_moves(char player) {
     return valid_moves;
 }
 
-int negamax(int depth, int alpha, int beta, char player) {
+int negascout(int depth, int alpha, int beta, char player) {
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
     // Base case: game is over or depth limit reached
@@ -280,20 +280,27 @@ int negamax(int depth, int alpha, int beta, char player) {
 
     // If no valid moves were found, pass the turn to the opponent
     if (sorted_moves.empty()) {
-        return -negamax(depth, -beta, -alpha, opponent);
+        return -negascout(depth, -beta, -alpha, opponent);
     }
 
     // Iterate through all sorted (valid) moves
-    for (const auto& move : sorted_moves) {
-        int i = move.first;
-        int j = move.second;
+    for (int idx = 0; idx < (int)sorted_moves.size(); idx++) {
+        int i = sorted_moves[idx].first;
+        int j = sorted_moves[idx].second;
 
         // Make a copy of the board and simulate the move
         Board board_copy = board;
         make_move(i, j, player);
 
-        // Recursively update the score by calling negamax for the opponent
-        int score = -negamax(depth - 1, -beta, -alpha, opponent);
+        // NegaScout: full window for first move, null window probe for the rest
+        int score;
+        if (idx == 0) {
+            score = -negascout(depth - 1, -beta, -alpha, opponent);
+        } else {
+            score = -negascout(depth - 1, -alpha - 1, -alpha, opponent);
+            if (score > alpha && score < beta)
+                score = -negascout(depth - 1, -beta, -alpha, opponent);
+        }
 
         // Undo the move
         board = board_copy;
@@ -362,7 +369,7 @@ std::pair<int, int> predict_move(char player, int time_limit) {
             make_move(move.first, move.second, player);
 
             // Call negamax to predict the score
-            int score = -negamax(current_depth, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
+            int score = -negascout(current_depth, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
 
             // Undo the move
             board = board_copy;
