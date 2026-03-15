@@ -72,14 +72,14 @@ static bool supports_unicode() {
            has_utf8(std::getenv("LC_CTYPE"));
 }
 
-static const char* cell_glyph(char c, bool unicode) {
+static const char* cell_glyph(char c, bool unicode, bool is_last = false) {
     if (unicode) {
-        if (c == PLAYER1) return "\033[1;97m○\033[0m";  // bold bright white hollow
-        if (c == PLAYER2) return "\033[1;37m●\033[0m";  // bold bright white filled
+        if (c == PLAYER1) return is_last ? "\033[1;31m○\033[0m" : "\033[1;97m○\033[0m";  // red if last move, else bold bright white hollow
+        if (c == PLAYER2) return is_last ? "\033[1;31m●\033[0m" : "\033[1;37m●\033[0m";  // red if last move, else bold bright white filled
         if (c == VALID)   return "\033[32m·\033[0m";    // green middle dot
     } else {
-        if (c == PLAYER1) return "B";
-        if (c == PLAYER2) return "W";
+        if (c == PLAYER1) return is_last ? "b" : "B";
+        if (c == PLAYER2) return is_last ? "w" : "W";
         if (c == VALID)   return "_";
     }
     return " ";
@@ -93,7 +93,8 @@ void print_board() {
     for (int i = 0; i < BOARD_SIZE; i++) {
         std::cout << i + 1 << " │";
         for (int j = 0; j < BOARD_SIZE; j++) {
-            std::cout << " " << cell_glyph(board[i][j], unicode) << " │";
+            bool is_last = (last_move.first == i && last_move.second == j);
+            std::cout << " " << cell_glyph(board[i][j], unicode, is_last) << " │";
         }
         std::cout << '\n';
         if (i < BOARD_SIZE - 1)

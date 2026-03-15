@@ -127,6 +127,12 @@ int main() {
                         board = restored.board;
                         current_player = restored.player;
                         move_number = restored.move_num - 1; // -1 so loop's ++ restores correct number
+                        if (!history.empty()) {
+                            const auto& prev = history.back();
+                            last_move = {prev.move[1] - '1', prev.move[0] - 'A'};
+                        } else {
+                            last_move = {-1, -1};
+                        }
                         did_undo = true;
                     }
                     print_highlighted_board(current_player);
@@ -163,6 +169,7 @@ int main() {
         history.push_back({board, current_player, move_number, move_str});
 
         // Make the move
+        last_move = {row, col};
         make_move(row, col, current_player);
 
         // Switch to the other player after the turn is complete

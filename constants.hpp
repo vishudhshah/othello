@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <utility>
 
 const int BOARD_SIZE = 8;
 const char EMPTY = '.';
@@ -11,6 +12,7 @@ const int DEFAULT_DEPTH = 5;
 const int DEFAULT_TIME_LIMIT = 5;
 
 extern std::vector<std::vector<char>> board;
+extern std::pair<int,int> last_move;
 
 // Weighted piece counter for the evaluation function
 extern const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE];
