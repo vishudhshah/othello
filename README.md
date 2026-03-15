@@ -22,6 +22,7 @@ Othello/Reversi game coded in C++. Can play against an 'AI'.
 ---
 
 ## Features
+- **Beautiful TUI** — Unicode board with box-drawing borders, a filled `●` for White and hollow `○` for Black, and valid moves highlighted in green.
 - AI time limit can be set to any positive integer (seconds), **default = 5**. In AI vs AI mode each side has its own time limit.
 - In PvE mode the player can choose their disk color and consequently, who starts first.
 - **Undo** (`U`) — reverts your last move. In PvE mode, undoes back to the player's own last turn, skipping over the AI's move.

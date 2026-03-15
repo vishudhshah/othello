@@ -5,6 +5,8 @@
 #include <ctime>
 #include <chrono>
 #include <filesystem>
+#include <cstdlib>
+#include <string_view>
 
 std::string player_name(char player) {
     return player == PLAYER1 ? "Black" : "White";
@@ -56,21 +58,48 @@ bool parse_64char(const std::string& s) {
     return true;
 }
 
-void print_board() {
-    char column_labels[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'};
+static bool supports_unicode() {
+    auto has_utf8 = [](const char* s) -> bool {
+        if (!s) return false;
+        std::string_view sv(s);
+        return sv.find("UTF-8") != std::string_view::npos ||
+               sv.find("utf-8") != std::string_view::npos ||
+               sv.find("UTF8")  != std::string_view::npos ||
+               sv.find("utf8")  != std::string_view::npos;
+    };
+    return has_utf8(std::getenv("LC_ALL")) ||
+           has_utf8(std::getenv("LANG"))   ||
+           has_utf8(std::getenv("LC_CTYPE"));
+}
 
-    std::cout << "  ";
-    for (char label : column_labels) {
-        std::cout << label << ' ';
+static const char* cell_glyph(char c, bool unicode) {
+    if (unicode) {
+        if (c == PLAYER1) return "\033[1;97m○\033[0m";  // bold bright white hollow
+        if (c == PLAYER2) return "\033[1;37m●\033[0m";  // bold bright white filled
+        if (c == VALID)   return "\033[32m·\033[0m";    // green middle dot
+    } else {
+        if (c == PLAYER1) return "B";
+        if (c == PLAYER2) return "W";
+        if (c == VALID)   return "_";
     }
-    std::cout << '\n';
+    return " ";
+}
 
+void print_board() {
+    static bool unicode = supports_unicode();
+
+    std::cout << "   A   B   C   D   E   F   G   H\n";
+    std::cout << "  ┌───┬───┬───┬───┬───┬───┬───┬───┐\n";
     for (int i = 0; i < BOARD_SIZE; i++) {
-        std::cout << i + 1 << ' ';
+        std::cout << i + 1 << " │";
         for (int j = 0; j < BOARD_SIZE; j++) {
-            std::cout << board[i][j] << ' ';
+            std::cout << " " << cell_glyph(board[i][j], unicode) << " │";
         }
         std::cout << '\n';
+        if (i < BOARD_SIZE - 1)
+            std::cout << "  ├───┼───┼───┼───┼───┼───┼───┼───┤\n";
+        else
+            std::cout << "  └───┴───┴───┴───┴───┴───┴───┴───┘\n";
     }
 }
 
