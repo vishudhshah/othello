@@ -88,7 +88,7 @@ static const char* cell_glyph(char c, bool unicode) {
 void print_board() {
     static bool unicode = supports_unicode();
 
-    std::cout << "   A   B   C   D   E   F   G   H\n";
+    std::cout << "    A   B   C   D   E   F   G   H\n";
     std::cout << "  ┌───┬───┬───┬───┬───┬───┬───┬───┐\n";
     for (int i = 0; i < BOARD_SIZE; i++) {
         std::cout << i + 1 << " │";
