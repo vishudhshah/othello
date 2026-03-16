@@ -89,18 +89,21 @@ void print_board() {
     static bool unicode = supports_unicode();
 
     std::cout << "    A   B   C   D   E   F   G   H\n";
-    std::cout << "  ┌───┬───┬───┬───┬───┬───┬───┬───┐\n";
+    // full single: ┌───┬─...─┬───┐  full double: ╔═══╦═...═╦═══╗
+    std::cout << "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\n";
     for (int i = 0; i < BOARD_SIZE; i++) {
-        std::cout << i + 1 << " │";
+        std::cout << i + 1 << " ║";  // single-line: │
         for (int j = 0; j < BOARD_SIZE; j++) {
             bool is_last = (last_move.first == i && last_move.second == j);
-            std::cout << " " << cell_glyph(board[i][j], unicode, is_last) << " │";
+            std::cout << " " << cell_glyph(board[i][j], unicode, is_last) << (j < BOARD_SIZE - 1 ? " │" : " ║");
         }
         std::cout << '\n';
         if (i < BOARD_SIZE - 1)
-            std::cout << "  ├───┼───┼───┼───┼───┼───┼───┼───┤\n";
+            // full single: ├───┼─...─┼───┤  full double: ╠═══╬═...═╬═══╣
+            std::cout << "  ╟───┼───┼───┼───┼───┼───┼───┼───╢\n";
         else
-            std::cout << "  └───┴───┴───┴───┴───┴───┴───┴───┘\n";
+            // full single: └───┴─...─┴───┘  full double: ╚═══╩═...═╩═══╝
+            std::cout << "  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n";
     }
 }
 
