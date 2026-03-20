@@ -27,7 +27,7 @@ Othello/Reversi game coded in C++. Can play against an 'AI'.
 - In PvE mode the player can choose their disk color and consequently, who starts first.
 - **Undo** (`U`) — reverts your last move. In PvE mode, undoes back to the player's own last turn, skipping over the AI's move.
 - **Resign** (`R`) — immediately concedes the game and awards the win to the opponent.
-- **Game log export** — at the end of every game, two files are saved to the `games/` folder:
+- **Game log export** — at the end of every game, two files are saved to the `logs/` folder:
   - `.log` — raw move sequence on a single line
   - `.txt` — human-readable log with move history, scores, result, and game settings
 

@@ -291,8 +291,8 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, const s
     char date_str[20];
     std::strftime(date_str, sizeof(date_str), "%Y-%m-%d %H:%M:%S", tm_info);
 
-    std::filesystem::create_directories("games");
-    std::string base = std::format("games/game_{}", timestamp);
+    std::filesystem::create_directories("logs");
+    std::string base = std::format("logs/game_{}", timestamp);
 
     std::string mode_str = game_mode == 1 ? "Player vs Player"
                          : game_mode == 2 ? "Player vs AI"
