@@ -9,6 +9,7 @@
 #include <fstream>
 #include <ctime>
 #include <chrono>
+#include <limits>
 
 using namespace std;
 
@@ -59,7 +60,7 @@ int main() {
     int move_number = 0;
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { Board board; char player; int move_num; string move; };
+    struct Snapshot { Board board; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); };
     vector<Snapshot> history;
 
     // Game loop
@@ -71,9 +72,10 @@ int main() {
 
             // Export the game log
             vector<pair<char, string>> moves;
-            for (const auto& s : history) moves.emplace_back(s.player, s.move);
+            vector<int> ai_scores;
+            for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); }
             char pc = (game_mode == 2) ? player_color : '\0';
-            export_game(moves, game_mode, pc, time_limit_b, time_limit_w, start_pos);
+            export_game(moves, ai_scores, game_mode, pc, time_limit_b, time_limit_w, start_pos);
 
             break;
         }
@@ -93,6 +95,7 @@ int main() {
         cout << format("{}'s turn.\n", player_name(current_player));
 
         // Handle different game modes
+        int move_ai_score = numeric_limits<int>::min();
         if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
             // PvP or PvE (Player's turn)
             bool did_undo = false;
@@ -106,9 +109,10 @@ int main() {
                     char winner = (current_player == PLAYER1) ? PLAYER2 : PLAYER1;
                     cout << format("{} resigns. {} wins!\n", player_name(current_player), player_name(winner));
                     vector<pair<char, string>> moves;
-                    for (const auto& s : history) moves.emplace_back(s.player, s.move);
+                    vector<int> ai_scores;
+                    for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); }
                     char pc = (game_mode == 2) ? player_color : '\0';
-                    export_game(moves, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
+                    export_game(moves, ai_scores, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
                     return 0;
                 } else if (row == -1) {
                     // Undo requested
@@ -153,7 +157,7 @@ int main() {
         } else {
             // AI's turn
             int time_limit = (current_player == PLAYER1) ? time_limit_b : time_limit_w;
-            pair<int, int> ai_move = predict_move(current_player, time_limit);
+            pair<int, int> ai_move = predict_move(current_player, time_limit, move_ai_score);
             row = ai_move.first;
             col = ai_move.second;
 
@@ -166,7 +170,7 @@ int main() {
 
         // Save board state to history before making the move
         string move_str = {(char)('A' + col), (char)('1' + row)};
-        history.push_back({board, current_player, move_number, move_str});
+        history.push_back({board, current_player, move_number, move_str, move_ai_score});
 
         // Make the move
         last_move = {row, col};

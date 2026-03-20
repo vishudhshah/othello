@@ -318,7 +318,7 @@ int negascout(int depth, int alpha, int beta, char player) {
     return best_score;
 }
 
-std::pair<int, int> predict_move(char player, int time_limit) {
+std::pair<int, int> predict_move(char player, int time_limit, int& out_score) {
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
     auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(time_limit);
 
@@ -395,6 +395,7 @@ std::pair<int, int> predict_move(char player, int time_limit) {
         current_depth++;
     }
 
+    out_score = best_score;
     std::cout << std::format("Best score for {}: {} (depth reached: {})\n", player, best_score, best_depth);
     return best_move;
 } 
