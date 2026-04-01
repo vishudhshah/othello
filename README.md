@@ -50,6 +50,7 @@ The AI then plays out the game from the given position.
 
 ## Notes on 'AI'
 - **Search**: Iterative deepening (IDDFS) with a time limit.
+- **Algorithm**: NegaScout (Principal Variation Search).
 - **Move ordering**: Moves are tried in priority order (corners → edges → inner cells → X-squares) to improve pruning efficiency.
 - **Evaluation components**:
   - *Material*: positional weights per square

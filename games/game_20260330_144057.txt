@@ -1,0 +1,47 @@
+Othello Game Log
+Date: 2026-03-30 14:40:57
+Mode: Player vs AI
+Player: Black
+AI time limit: 1s
+
+Move  1: D3 (Black)
+Move  2: C3 (White) [score: -1440]
+Move  3: B3 (Black)
+Move  4: E3 (White) [score: 3550]
+Move  5: F3 (Black)
+Move  6: E2 (White) [score: 4030]
+Move  7: F1 (Black)
+Move  8: D2 (White) [score: 1750]
+Move  9: C4 (Black)
+Move 10: B4 (White) [score: 1810]
+Move 11: E6 (Black)
+Move 12: F4 (White) [score: 1080]
+Move 13: F5 (Black)
+Move 14: E1 (White) [score: 479]
+Move 15: D1 (Black)
+Move 16: A3 (White) [score: 654]
+Move 17: A4 (Black)
+Move 18: A5 (White) [score: 2110]
+Move 19: F2 (Black)
+Move 20: C5 (White) [score: 964]
+Move 21: B5 (Black)
+Move 22: G3 (White) [score: 2253]
+Move 23: C2 (Black)
+Move 24: G4 (White) [score: 2348]
+Move 25: G5 (Black)
+Move 26: B1 (White) [score: 4025]
+Move 27: H5 (Black)
+Move 28: H4 (White) [score: 6395]
+Move 29: H3 (Black)
+Move 30: A6 (White) [score: 7016]
+Move 31: C1 (Black)
+Move 32: G1 (White) [score: 11008]
+Move 33: G2 (Black)
+Move 34: H6 (White) [score: 14795]
+Move 35: G6 (Black)
+Move 36: H2 (White) [score: 13345]
+Move 37: A2 (Black)
+Move 38: A1 (White) [score: 1009395]
+
+Black: 17, White: 25
+Black resigned, White wins
