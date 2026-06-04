@@ -1,6 +1,6 @@
 # Compiler, flags, source files, header files, object/dep paths, output file
 CXX = clang++
-CXXFLAGS = -std=c++20 -Wall -Wextra -O2
+CXXFLAGS = -std=c++20 -Wall -Wextra -O3 -ffast-math -march=native -flto
 SRC = main.cpp constants.cpp board.cpp ai.cpp input.cpp
 HEADERS = constants.hpp board.hpp ai.hpp input.hpp
 OUT = main
