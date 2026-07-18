@@ -4,11 +4,8 @@
 #include "board.hpp"
 #include "ai.hpp"
 #include "input.hpp"
-#include <iostream>
+#include "ui.hpp"
 #include <format>
-#include <fstream>
-#include <ctime>
-#include <chrono>
 #include <limits>
 
 using namespace std;
@@ -20,6 +17,9 @@ using namespace std;
  * @since 2024-06-26
  */
 int main() {
+    ui_init();
+    struct UiGuard { ~UiGuard() { ui_teardown(); } } ui_guard;
+
     pair<int, int> user_input;
     int row, col;
     int time_limit_b = DEFAULT_TIME_LIMIT;
@@ -53,11 +53,11 @@ int main() {
     // Initialize the standard starting board (skipped in puzzle mode — board already set)
     if (game_mode != 4)
         initialize_board();
-    print_highlighted_board(current_player);
-    cout << '\n';
 
     // Initialize the move number
     int move_number = 0;
+
+    render_game_screen(current_player, format("{}'s turn.", player_name(current_player)));
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
     struct Snapshot { Board board; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); };
@@ -67,9 +67,6 @@ int main() {
     for (;;) {
         // Check if the game is over
         if (is_game_over()) {
-            // Print the winning message
-            print_winning_message();
-
             // Export the game log
             vector<pair<char, string>> moves;
             vector<int> ai_scores;
@@ -77,22 +74,22 @@ int main() {
             char pc = (game_mode == 2) ? player_color : '\0';
             export_game(moves, ai_scores, game_mode, pc, time_limit_b, time_limit_w, start_pos);
 
+            // Show the final result and wait for the player to acknowledge it
+            render_winning_screen();
+
             break;
         }
 
         // Check if the current player's turn should be skipped
         if (turn_skip(current_player)) {
-            cout << format("{}'s turn is skipped!\n", player_name(current_player));
+            log_move(format("{}'s turn was skipped.", player_name(current_player)));
             switch_player(current_player);
-            print_highlighted_board(current_player);
             continue;
         }
 
-        // Count and print the move number
+        // Count the move number
         move_number++;
-        cout << format("Move {}\n", move_number);
-
-        cout << format("{}'s turn.\n", player_name(current_player));
+        render_game_screen(current_player, format("Move {} - {}'s turn.", move_number, player_name(current_player)));
 
         // Handle different game modes
         int move_ai_score = numeric_limits<int>::min();
@@ -106,18 +103,17 @@ int main() {
             while (true) {
                 if (row == -2) {
                     // Resign requested
-                    char winner = (current_player == PLAYER1) ? PLAYER2 : PLAYER1;
-                    cout << format("{} resigns. {} wins!\n", player_name(current_player), player_name(winner));
                     vector<pair<char, string>> moves;
                     vector<int> ai_scores;
                     for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); }
                     char pc = (game_mode == 2) ? player_color : '\0';
                     export_game(moves, ai_scores, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
+                    render_winning_screen(current_player);
                     return 0;
                 } else if (row == -1) {
                     // Undo requested
                     if (history.empty()) {
-                        cout << "Nothing to undo.\n";
+                        render_status_message("Nothing to undo.");
                     } else {
                         // In PvE, pop until we find the player's own snapshot (handles skipped turns)
                         Snapshot restored = history.back();
@@ -138,14 +134,13 @@ int main() {
                             last_move = {-1, -1};
                         }
                         did_undo = true;
+                        log_move(format("Undid move {}.", restored.move_num));
                     }
-                    print_highlighted_board(current_player);
-                    cout << '\n';
                     if (did_undo) break;
                 } else if (is_valid_move(row, col, current_player)) {
                     break;
                 } else {
-                    cout << "Please see the valid moves highlighted!\n";
+                    render_status_message("Please see the valid moves highlighted!");
                 }
                 user_input = get_user_input();
                 row = user_input.first;
@@ -153,19 +148,27 @@ int main() {
             }
 
             if (did_undo) continue;
-            cout << '\n';
+
+            log_move(format("Move {}: {} played {}{}.", move_number, player_name(current_player), (char)('A' + col), (char)('1' + row)));
         } else {
             // AI's turn
             int time_limit = (current_player == PLAYER1) ? time_limit_b : time_limit_w;
-            pair<int, int> ai_move = predict_move(current_player, time_limit, move_ai_score);
+            int move_ai_depth = 0;
+            // Discard any clicks/keys queued up before the AI starts "thinking" (e.g. leftover
+            // from the previous turn), then again right after it moves, so nothing typed or
+            // clicked during the AI's turn gets silently played as the human's next move.
+            discard_pending_input();
+            pair<int, int> ai_move = predict_move(current_player, time_limit, move_ai_score, move_ai_depth);
+            discard_pending_input();
             row = ai_move.first;
             col = ai_move.second;
 
             // Convert row and col to othello notation
             char row_char = row + '1';
             char col_char = col + 'A';
-            
-            cout << format("AI plays: {}{}\n\n", col_char, row_char);
+
+            log_move(format("Move {}: AI ({}) played {}{} (score {}, depth {}).",
+                move_number, player_name(current_player), col_char, row_char, move_ai_score, move_ai_depth));
         }
 
         // Save board state to history before making the move
@@ -178,10 +181,6 @@ int main() {
 
         // Switch to the other player after the turn is complete
         switch_player(current_player);
-
-        // Print the board with valid moves highlighted for the next player
-        print_highlighted_board(current_player);
-        cout << '\n';
     }
 
     return 0;

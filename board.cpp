@@ -1,13 +1,10 @@
 #include "board.hpp"
-#include <iostream>
 #include <format>
 #include <limits>
 #include <fstream>
 #include <ctime>
 #include <chrono>
 #include <filesystem>
-#include <cstdlib>
-#include <string_view>
 
 std::string player_name(char player) {
     return player == PLAYER1 ? "Black" : "White";
@@ -59,60 +56,8 @@ bool parse_64char(const std::string& s) {
     return true;
 }
 
-static bool supports_unicode() {
-    auto has_utf8 = [](const char* s) -> bool {
-        if (!s) return false;
-        std::string_view sv(s);
-        return sv.find("UTF-8") != std::string_view::npos ||
-               sv.find("utf-8") != std::string_view::npos ||
-               sv.find("UTF8")  != std::string_view::npos ||
-               sv.find("utf8")  != std::string_view::npos;
-    };
-    return has_utf8(std::getenv("LC_ALL")) ||
-           has_utf8(std::getenv("LANG"))   ||
-           has_utf8(std::getenv("LC_CTYPE"));
-}
-
-static const char* cell_glyph(char c, bool unicode, bool is_last = false) {
-    if (unicode) {
-        if (c == PLAYER1) return is_last ? "\033[1;31m○\033[0m" : "\033[1;97m○\033[0m";  // red if last move, else bold bright white hollow
-        if (c == PLAYER2) return is_last ? "\033[1;31m●\033[0m" : "\033[1;37m●\033[0m";  // red if last move, else bold bright white filled
-        if (c == VALID)   return "\033[32m·\033[0m";    // green middle dot
-    } else {
-        if (c == PLAYER1) return is_last ? "b" : "B";
-        if (c == PLAYER2) return is_last ? "w" : "W";
-        if (c == VALID)   return "_";
-    }
-    return " ";
-}
-
-void print_board() {
-    static bool unicode = supports_unicode();
-
-    std::cout << "    A   B   C   D   E   F   G   H\n";
-    // full single: ┌───┬─...─┬───┐  full double: ╔═══╦═...═╦═══╗
-    std::cout << "  ╔═══╤═══╤═══╤═══╤═══╤═══╤═══╤═══╗\n";
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        std::cout << i + 1 << " ║";  // single-line: │
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            bool is_last = (last_move.first == i && last_move.second == j);
-            std::cout << " " << cell_glyph(board[i][j], unicode, is_last) << (j < BOARD_SIZE - 1 ? " │" : " ║");
-        }
-        std::cout << '\n';
-        if (i < BOARD_SIZE - 1)
-            // full single: ├───┼─...─┼───┤  full double: ╠═══╬═...═╬═══╣
-            std::cout << "  ╟───┼───┼───┼───┼───┼───┼───┼───╢\n";
-        else
-            // full single: └───┴─...─┴───┘  full double: ╚═══╩═...═╩═══╝
-            std::cout << "  ╚═══╧═══╧═══╧═══╧═══╧═══╧═══╧═══╝\n";
-    }
-}
-
-void print_highlighted_board(char player) {
-    // Initialize a vector to store valid moves
+std::vector<std::pair<int, int>> compute_valid_moves(char player) {
     std::vector<std::pair<int, int>> valid_moves;
-
-    // Iterate through all cells in the board and store valid moves
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
             if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
@@ -120,19 +65,7 @@ void print_highlighted_board(char player) {
             }
         }
     }
-
-    // Highlight all valid moves
-    for (const auto& move : valid_moves) {
-        board[move.first][move.second] = VALID;
-    }
-
-    print_board();
-    print_scores();
-
-    // Dehighlight all valid moves
-    for (const auto& move : valid_moves) {
-        board[move.first][move.second] = EMPTY;
-    }
+    return valid_moves;
 }
 
 void make_move(int row, int col, char player) {
@@ -250,35 +183,6 @@ std::pair<int, int> calculate_scores() {
     return std::make_pair(player1_score, player2_score);
 }
 
-void print_scores() {
-    // Calculate the scores of both players
-    std::pair<int, int> scores = calculate_scores();
-    int player1_score = scores.first;
-    int player2_score = scores.second;
-
-    // Print the scores of both players
-    std::cout << std::format("{}: {}, {}: {}\n", player_name(PLAYER1), player1_score, player_name(PLAYER2), player2_score);
-}
-
-void print_winning_message() {
-    // Calculate how much did the player win by
-    std::pair<int, int> scores = calculate_scores();
-    int player1_score = scores.first;
-    int player2_score = scores.second;
-    int winner_score = (player1_score > player2_score) ? player1_score : player2_score;
-    int loser_score = (player1_score < player2_score) ? player1_score : player2_score;
-    int score_difference = winner_score - loser_score;
-
-    std::cout << "Game Over.";
-    if (score_difference == 0) {
-        std::cout << " It's a tie!\n";
-    } else {
-        std::cout << std::format(" {} won by {} points!\n",
-            player_name(player1_score > player2_score ? PLAYER1 : PLAYER2),
-            score_difference);
-    }
-}
-
 void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
     // Build timestamped base filename inside games/ folder
     auto now = std::chrono::system_clock::now();
@@ -333,6 +237,4 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, const s
         readable << std::format("Black won by {} points\n", b_score - w_score);
     else
         readable << std::format("White won by {} points\n", w_score - b_score);
-
-    std::cout << std::format("Game saved to {}.log and {}.txt\n", base, base);
 }

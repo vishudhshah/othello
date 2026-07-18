@@ -1,32 +1,6 @@
 #include "input.hpp"
-#include "board.hpp"
 #include <iostream>
-#include <limits>
 #include <format>
-#include <cctype>
-
-int get_game_mode() {
-    int mode;
-
-    // Get the mode of the game from the user
-    std::cout << "Enter the mode of the game:\n"
-        << "1. Player vs Player\n"
-        << "2. Player vs AI\n"
-        << "3. AI vs AI\n"
-        << "4. Puzzle Mode\n";
-    std::cin >> mode;
-
-    // Validate the user input
-    while (std::cin.fail() || mode < 1 || mode > 4) {
-        std::cin.clear(); // Clear error flags
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // Ignore rest of the line
-        std::cout << "Please enter a valid game mode.\n";
-        std::cin >> mode;
-    }
-    std::cout << '\n';
-
-    return mode;
-}
 
 int get_search_depth() {
     int depth;
@@ -47,128 +21,10 @@ int get_search_depth() {
     return depth == 0 ? DEFAULT_DEPTH : depth;
 }
 
-int get_time_limit(const std::string& label) {
-    int time_limit;
-
-    // Get the time limit from the user
-    std::cout << std::format("Enter the time limit for {} (in seconds):\n", label);
-    std::cout << std::format("If you would like to use the default time limit ({} seconds), enter 0.\n", DEFAULT_TIME_LIMIT);
-    std::cin >> time_limit;
-
-    // Validate the user input
-    while (time_limit < 0) {
-        std::cout << "Please enter a valid time limit.\n";
-        std::cin >> time_limit;
-    }
-    std::cout << '\n';
-
-    // Use the default time limit if the user entered 0
-    return time_limit == 0 ? DEFAULT_TIME_LIMIT : time_limit;
-}
-
-char get_disk_color() {
-    char disk_color;
-
-    // Get the disk color for the player from the user
-    std::cout << "Enter the disk color for the player (B/b or W/w):\n";
-    std::cin >> disk_color;
-
-    // Validate the user input
-    while (disk_color != PLAYER1 && disk_color != PLAYER2 && disk_color != 'b' && disk_color != 'w') {
-        std::cout << "Please enter a valid disk color (B/b or W/w):\n";
-        std::cin >> disk_color;
-    }
-    std::cout << '\n';
-
-    // Convert to uppercase
-    disk_color = std::toupper(disk_color);
-
-    return disk_color;
-}
-
-std::pair<int, int> get_user_input() {
-    std::string user_input;
-    int row, col;
-
-    // Get user input
-    std::cout << "Enter your move (eg. A1 or a1), U to undo, or R to resign: ";
-    std::cin >> user_input;
-
-    // Check for undo or resign
-    if (user_input == "u" || user_input == "U") return {-1, -1};
-    if (user_input == "r" || user_input == "R") return {-2, -2};
-
-    // Validate the user input
-    while (user_input.length() != 2 || user_input[0] < 'A' || (user_input[0] > 'A' + BOARD_SIZE - 1 && user_input[0] < 'a') || user_input[0] > 'a' + BOARD_SIZE - 1 || user_input[1] < '1' || user_input[1] > '0' + BOARD_SIZE) {
-        std::cout << "Please enter a valid move (eg. A1 or a1), U to undo, or R to resign: ";
-        std::cin >> user_input;
-        if (user_input == "u" || user_input == "U") return {-1, -1};
-        if (user_input == "r" || user_input == "R") return {-2, -2};
-    }
-
-    // Convert the user input to row and column
-    row = user_input[1] - '1';
-    col = std::toupper(user_input[0]) - 'A';
-
-    return std::make_pair(row, col);
-}
-
 void switch_player(char &currentPlayer) {
     currentPlayer = (currentPlayer == PLAYER1) ? PLAYER2 : PLAYER1;
 }
 
 char get_opponent(char player) {
     return (player == PLAYER1) ? PLAYER2 : PLAYER1;
-}
-
-std::pair<char, std::string> setup_puzzle_board() {
-    // Ask for input format
-    int fmt;
-    std::cout << "Choose board input format:\n"
-              << "1. FEN-like string    (e.g. 8/8/8/3WB3/3BW3/8/8/8)\n"
-              << "2. 64-character string (e.g. ...........................WB......BW...........................)\n";
-    std::cin >> fmt;
-    while (std::cin.fail() || fmt < 1 || fmt > 2) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "Please enter 1 or 2.\n";
-        std::cin >> fmt;
-    }
-    std::cout << '\n';
-
-    // Ask for board string and validate
-    std::string board_str;
-    if (fmt == 1) {
-        std::cout << "Enter FEN-like board string:\n";
-        std::cin >> board_str;
-        while (!parse_fen(board_str)) {
-            std::cout << "Invalid FEN string. Rows are separated by /, each must sum to exactly 8 cells.\n"
-                      << "Valid characters: B/b (Black), W/w (White), 1-8 (empty cells).\n"
-                      << "Enter FEN-like board string:\n";
-            std::cin >> board_str;
-        }
-    } else {
-        std::cout << "Enter 64-character board string:\n";
-        std::cin >> board_str;
-        while (!parse_64char(board_str)) {
-            std::cout << "Invalid string. Must be exactly 64 characters using only B/b (Black), W/w (White), or . (empty).\n"
-                      << "Enter 64-character board string:\n";
-            std::cin >> board_str;
-        }
-    }
-    std::cout << '\n';
-
-    // Ask whose turn it is
-    char starting_player;
-    std::cout << "Whose turn is it? (B/b for Black, W/w for White):\n";
-    std::cin >> starting_player;
-    while (starting_player != 'B' && starting_player != 'b' &&
-           starting_player != 'W' && starting_player != 'w') {
-        std::cout << "Please enter B/b or W/w:\n";
-        std::cin >> starting_player;
-    }
-    std::cout << '\n';
-
-    for (char& c : board_str) c = std::toupper(c);
-    return {(char)std::toupper(starting_player), board_str};
 }
