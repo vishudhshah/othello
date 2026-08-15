@@ -99,6 +99,7 @@ void apply_resize_if_needed() {
     endwin();
     refresh();
     clear();
+    render_game_screen(g_last_player);
 }
 
 std::optional<std::pair<int, int>> screen_to_cell(int y, int x) {
@@ -317,6 +318,12 @@ void ui_init() {
     keypad(stdscr, TRUE);
     curs_set(0);
     mousemask(BUTTON1_PRESSED, NULL);
+
+    // Without a timeout, getch() blocks until a keypress/click arrives, so a
+    // pending SIGWINCH resize sits unapplied until the next input event. A
+    // short timeout makes getch() return ERR periodically so the input loops'
+    // apply_resize_if_needed() check actually gets to run without user input.
+    timeout(100);
 
     std::signal(SIGINT, handle_signal_exit);
     std::signal(SIGTERM, handle_signal_exit);
