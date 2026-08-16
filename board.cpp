@@ -5,6 +5,7 @@
 #include <ctime>
 #include <chrono>
 #include <filesystem>
+#include <cstdlib>
 
 std::string player_name(char player) {
     return player == PLAYER1 ? "Black" : "White";
@@ -183,8 +184,8 @@ std::pair<int, int> calculate_scores() {
     return std::make_pair(player1_score, player2_score);
 }
 
-void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
-    // Build timestamped base filename inside games/ folder
+void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
+    // Build timestamped base filename inside logs/ folder
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
     std::tm* tm_info = std::localtime(&t);
@@ -237,4 +238,27 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, const s
         readable << std::format("Black won by {} points\n", b_score - w_score);
     else
         readable << std::format("White won by {} points\n", w_score - b_score);
+
+    // Stats CSV: one row per AI move, plus game-level metadata repeated on every row so
+    // each file is self-contained for bulk analysis across many games (no join needed).
+    std::string player_color_str = (player_color != '\0') ? player_name(player_color) : "";
+    // In PvE (mode 2), time_limit_b/w are copies of the same single value and only the
+    // AI's side actually uses it — blank the human's side so it doesn't look meaningful.
+    std::string time_limit_b_str = (game_mode == 2 && player_color == PLAYER1) ? "" : std::to_string(time_limit_b);
+    std::string time_limit_w_str = (game_mode == 2 && player_color == PLAYER2) ? "" : std::to_string(time_limit_w);
+    std::ofstream csv(base + ".csv");
+    csv << "move_number,score,depth,date,game_mode,player_color,time_limit_b,time_limit_w\n";
+    for (int i = 0; i < (int)moves.size(); i++) {
+        if (ai_scores[i] != std::numeric_limits<int>::min())
+            csv << std::format("{},{},{},{},{},{},{},{}\n", i + 1, ai_scores[i], ai_depths[i],
+                date_str, mode_str, player_color_str, time_limit_b_str, time_limit_w_str);
+    }
+    csv.close();
+
+    // Opt-in chart generation: only runs if OTHELLO_GRAPH is set, and never lets a
+    // missing/broken python install print to the terminal (curses is still active here).
+    if (std::getenv("OTHELLO_GRAPH")) {
+        std::string cmd = std::format("python3 plot_game.py \"{}.csv\" 2>/dev/null", base);
+        std::system(cmd.c_str());
+    }
 }

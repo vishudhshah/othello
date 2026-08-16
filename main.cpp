@@ -60,7 +60,7 @@ int main() {
     render_game_screen(current_player, format("{}'s turn.", player_name(current_player)));
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { Board board; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); };
+    struct Snapshot { Board board; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; };
     vector<Snapshot> history;
 
     // Game loop
@@ -70,9 +70,10 @@ int main() {
             // Export the game log
             vector<pair<char, string>> moves;
             vector<int> ai_scores;
-            for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); }
+            vector<int> ai_depths;
+            for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
             char pc = (game_mode == 2) ? player_color : '\0';
-            export_game(moves, ai_scores, game_mode, pc, time_limit_b, time_limit_w, start_pos);
+            export_game(moves, ai_scores, ai_depths, game_mode, pc, time_limit_b, time_limit_w, start_pos);
 
             // Show the final result and wait for the player to acknowledge it
             render_winning_screen();
@@ -93,6 +94,7 @@ int main() {
 
         // Handle different game modes
         int move_ai_score = numeric_limits<int>::min();
+        int move_ai_depth = 0;
         if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
             // PvP or PvE (Player's turn)
             bool did_undo = false;
@@ -105,9 +107,10 @@ int main() {
                     // Resign requested
                     vector<pair<char, string>> moves;
                     vector<int> ai_scores;
-                    for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); }
+                    vector<int> ai_depths;
+                    for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
                     char pc = (game_mode == 2) ? player_color : '\0';
-                    export_game(moves, ai_scores, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
+                    export_game(moves, ai_scores, ai_depths, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
                     render_winning_screen(current_player);
                     return 0;
                 } else if (row == -1) {
@@ -153,7 +156,6 @@ int main() {
         } else {
             // AI's turn
             int time_limit = (current_player == PLAYER1) ? time_limit_b : time_limit_w;
-            int move_ai_depth = 0;
             // Discard any clicks/keys queued up before the AI starts "thinking" (e.g. leftover
             // from the previous turn), then again right after it moves, so nothing typed or
             // clicked during the AI's turn gets silently played as the human's next move.
@@ -173,7 +175,7 @@ int main() {
 
         // Save board state to history before making the move
         string move_str = {(char)('A' + col), (char)('1' + row)};
-        history.push_back({board, current_player, move_number, move_str, move_ai_score});
+        history.push_back({board, current_player, move_number, move_str, move_ai_score, move_ai_depth});
 
         // Make the move
         last_move = {row, col};
