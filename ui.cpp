@@ -341,6 +341,10 @@ void log_move(const std::string& text) {
     if (g_move_log.size() > MOVE_LOG_CAPACITY) g_move_log.pop_front();
 }
 
+void clear_move_log() {
+    g_move_log.clear();
+}
+
 void discard_pending_input() {
     flushinp();
 }
@@ -364,7 +368,7 @@ void render_status_message(const std::string& msg) {
     refresh();
 }
 
-void render_winning_screen(char resigned_by) {
+bool render_winning_screen(char resigned_by) {
     apply_resize_if_needed();
     clear();
     draw_board(PLAYER1, /*show_hints=*/false);
@@ -383,12 +387,13 @@ void render_winning_screen(char resigned_by) {
 
     mvprintw(AY(ROW_SCORE), AX(0), "%s: %d, %s: %d", player_name(PLAYER1).c_str(), b_score, player_name(PLAYER2).c_str(), w_score);
     mvaddstr(AY(ROW_MESSAGE), AX(0), ("Game Over. " + msg).c_str());
-    mvaddstr(AY(ROW_LEGEND), AX(0), "Press any key to exit...");
+    mvaddstr(AY(ROW_LEGEND), AX(0), "Press N for a new game, any other key to exit...");
     draw_move_log();
     refresh();
 
     nodelay(stdscr, FALSE);
-    getch();
+    int key = getch();
+    return key == 'n' || key == 'N';
 }
 
 // ---- input.hpp definitions (moved here from input.cpp so they can use curses) ----
