@@ -291,9 +291,8 @@ int negascout(int depth, int alpha, int beta, char player) {
         int i = sorted_moves[idx].first;
         int j = sorted_moves[idx].second;
 
-        // Make a copy of the board and simulate the move
-        Board board_copy = board;
-        make_move(i, j, player);
+        // Simulate the move, keeping an undo record instead of copying the board
+        MoveUndo undo = make_move_undoable(i, j, player);
 
         // NegaScout: full window for first move, null window probe for the rest
         int score;
@@ -306,7 +305,7 @@ int negascout(int depth, int alpha, int beta, char player) {
         }
 
         // Undo the move
-        board = board_copy;
+        unmake_move(undo);
 
         // Update the best score
         best_score = std::max(best_score, score);
@@ -334,10 +333,9 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
     // a static evaluation of the resulting position, same as the depth == 0
     // leaf case below, at negligible cost (no recursion into the opponent).
     if (sorted_moves.size() == 1) {
-        Board board_copy = board;
-        make_move(sorted_moves[0].first, sorted_moves[0].second, player);
+        MoveUndo undo = make_move_undoable(sorted_moves[0].first, sorted_moves[0].second, player);
         out_score = evaluate_board(player, game_phase());
-        board = board_copy;
+        unmake_move(undo);
         out_depth = 0;
         return sorted_moves[0];
     }
@@ -376,15 +374,14 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
                 break;
             }
 
-            // Make a copy of the board and simulate the move
-            Board board_copy = board;
-            make_move(move.first, move.second, player);
+            // Simulate the move, keeping an undo record instead of copying the board
+            MoveUndo undo = make_move_undoable(move.first, move.second, player);
 
             // Call negascout to predict the score
             int score = -negascout(current_depth, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
 
             // Undo the move
-            board = board_copy;
+            unmake_move(undo);
 
             // Update the current best move and score
             if (score > current_best_score) {

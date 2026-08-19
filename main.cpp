@@ -5,6 +5,7 @@
 #include "ai.hpp"
 #include "input.hpp"
 #include "ui.hpp"
+#include "zobrist.hpp"
 #include <format>
 #include <limits>
 #include <vector>
@@ -25,19 +26,29 @@ using namespace std;
 // moves for the side to move) does not consume a ply, matching negascout's
 // own pass convention (ai.cpp) so perft node counts stay meaningful as a
 // baseline for that search.
-static uint64_t perft(int depth, char player) {
+//
+// When verify_zobrist is set, asserts current_hash (maintained incrementally
+// by make_move) matches a from-scratch compute_hash() at every node visited —
+// this is --verify-zobrist's actual check. On mismatch, prints the offending
+// position depth and aborts the traversal early (returns 0, caller reports).
+static bool zobrist_mismatch_found = false;
+static uint64_t perft(int depth, char player, bool verify_zobrist) {
+    if (verify_zobrist && !zobrist_mismatch_found && current_hash != compute_hash(board)) {
+        printf("ZOBRIST MISMATCH at perft depth=%d: current_hash=%llu compute_hash=%llu\n",
+            depth, (unsigned long long)current_hash, (unsigned long long)compute_hash(board));
+        zobrist_mismatch_found = true;
+    }
     if (depth == 0) return 1;
     if (is_game_over()) return 1;
     auto moves = compute_valid_moves(player);
     if (moves.empty()) {
-        return perft(depth, get_opponent(player));
+        return perft(depth, get_opponent(player), verify_zobrist);
     }
     uint64_t nodes = 0;
     for (auto& mv : moves) {
-        Board board_copy = board;
-        make_move(mv.first, mv.second, player);
-        nodes += perft(depth - 1, get_opponent(player));
-        board = board_copy;
+        MoveUndo undo = make_move_undoable(mv.first, mv.second, player);
+        nodes += perft(depth - 1, get_opponent(player), verify_zobrist);
+        unmake_move(undo);
     }
     return nodes;
 }
@@ -71,8 +82,11 @@ static int run_headless(int argc, char** argv) {
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
         string pl = get_val("--player", "B");
         char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
-        uint64_t nodes = perft(depth, player);
+        bool verify_zobrist = has_flag("--verify-zobrist");
+        zobrist_mismatch_found = false;
+        uint64_t nodes = perft(depth, player, verify_zobrist);
         printf("PERFT depth=%d nodes=%llu\n", depth, (unsigned long long)nodes);
+        if (verify_zobrist) printf("ZOBRIST %s\n", zobrist_mismatch_found ? "MISMATCH" : "OK");
         return 0;
     }
 
@@ -123,6 +137,8 @@ static int run_headless(int argc, char** argv) {
  * @since 2024-06-26
  */
 int main(int argc, char** argv) {
+    init_zobrist_table();
+
     int headless_result = run_headless(argc, argv);
     if (headless_result >= 0) return headless_result;
 
@@ -130,7 +146,7 @@ int main(int argc, char** argv) {
     struct UiGuard { ~UiGuard() { ui_teardown(); } } ui_guard;
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { Board board; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; };
+    struct Snapshot { Board board; uint64_t hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; };
 
     // Outer loop: each iteration is one full game, from mode selection to game over.
     // play_again controls whether we loop back for a new game or exit after the inner loop.
@@ -247,6 +263,7 @@ int main(int argc, char** argv) {
                                 }
                             }
                             board = restored.board;
+                            current_hash = restored.hash;
                             current_player = restored.player;
                             move_number = restored.move_num - 1; // -1 so loop's ++ restores correct number
                             if (!history.empty()) {
@@ -295,7 +312,7 @@ int main(int argc, char** argv) {
 
             // Save board state to history before making the move
             string move_str = {(char)('A' + col), (char)('1' + row)};
-            history.push_back({board, current_player, move_number, move_str, move_ai_score, move_ai_depth});
+            history.push_back({board, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth});
 
             // Make the move
             last_move = {row, col};

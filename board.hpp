@@ -10,6 +10,19 @@ void initialize_board();
 bool parse_fen(const std::string& fen);
 bool parse_64char(const std::string& s);
 void make_move(int row, int col, char player);
+
+// Undo record for make_move_undoable()/unmake_move(): the search hot path's
+// alternative to a full Board copy+restore. 19 is the maximum number of
+// discs a single Othello move can flip.
+struct MoveUndo {
+    int row, col;
+    char player;
+    int flip_count;
+    std::pair<int, int> flipped[19];
+};
+MoveUndo make_move_undoable(int row, int col, char player);
+void unmake_move(const MoveUndo& undo);
+
 bool is_valid_move(int row, int col, char player);
 bool is_game_over();
 bool turn_skip(char player);

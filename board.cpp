@@ -1,4 +1,5 @@
 #include "board.hpp"
+#include "zobrist.hpp"
 #include <format>
 #include <limits>
 #include <fstream>
@@ -16,6 +17,7 @@ void initialize_board() {
     board[BOARD_SIZE/2 - 1][BOARD_SIZE/2]     = PLAYER1;
     board[BOARD_SIZE/2]    [BOARD_SIZE/2 - 1] = PLAYER1;
     board[BOARD_SIZE/2]    [BOARD_SIZE/2]     = PLAYER2;
+    current_hash = compute_hash(board);
 }
 
 bool parse_fen(const std::string& fen) {
@@ -41,6 +43,7 @@ bool parse_fen(const std::string& fen) {
         }
         if (col != BOARD_SIZE) return false; // row didn't sum to 8
     }
+    current_hash = compute_hash(board);
     return true;
 }
 
@@ -54,6 +57,7 @@ bool parse_64char(const std::string& s) {
         else if (c == '.')             board[i / BOARD_SIZE][i % BOARD_SIZE] = EMPTY;
         else return false; // unknown character
     }
+    current_hash = compute_hash(board);
     return true;
 }
 
@@ -69,8 +73,17 @@ std::vector<std::pair<int, int>> compute_valid_moves(char player) {
     return valid_moves;
 }
 
-void make_move(int row, int col, char player) {
+// Shared flip logic behind make_move()/make_move_undoable(): identical board
+// mutation and incremental hash update either way. When undo is non-null,
+// also records the flipped squares so unmake_move() can reverse exactly this
+// call without a full-board copy/restore.
+static void apply_flips(int row, int col, char player, MoveUndo* undo) {
+    int player_idx = (player == PLAYER1) ? 0 : 1;
+    int opponent_idx = 1 - player_idx;
+
     board[row][col] = player;
+    current_hash ^= ZOBRIST_TABLE[player_idx][row * BOARD_SIZE + col];
+    if (undo) { undo->row = row; undo->col = col; undo->player = player; undo->flip_count = 0; }
 
     // Check for opponent pieces in all eight directions
     int directions[8][2] = {{1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}};
@@ -94,11 +107,40 @@ void make_move(int row, int col, char player) {
                 y -= dy;
                 while (x != col || y != row) {
                     board[y][x] = player;
+                    current_hash ^= ZOBRIST_TABLE[opponent_idx][y * BOARD_SIZE + x];
+                    current_hash ^= ZOBRIST_TABLE[player_idx][y * BOARD_SIZE + x];
+                    if (undo) undo->flipped[undo->flip_count++] = {y, x};
                     x -= dx;
                     y -= dy;
                 }
             }
         }
+    }
+}
+
+void make_move(int row, int col, char player) {
+    apply_flips(row, col, player, nullptr);
+}
+
+MoveUndo make_move_undoable(int row, int col, char player) {
+    MoveUndo undo;
+    apply_flips(row, col, player, &undo);
+    return undo;
+}
+
+void unmake_move(const MoveUndo& undo) {
+    int player_idx = (undo.player == PLAYER1) ? 0 : 1;
+    int opponent_idx = 1 - player_idx;
+    char opponent = (undo.player == PLAYER1) ? PLAYER2 : PLAYER1;
+
+    board[undo.row][undo.col] = EMPTY;
+    current_hash ^= ZOBRIST_TABLE[player_idx][undo.row * BOARD_SIZE + undo.col];
+
+    for (int k = 0; k < undo.flip_count; k++) {
+        int r = undo.flipped[k].first, c = undo.flipped[k].second;
+        board[r][c] = opponent;
+        current_hash ^= ZOBRIST_TABLE[player_idx][r * BOARD_SIZE + c];
+        current_hash ^= ZOBRIST_TABLE[opponent_idx][r * BOARD_SIZE + c];
     }
 }
 

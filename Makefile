@@ -1,8 +1,8 @@
 # Compiler, flags, source files, header files, object/dep paths, output file
 CXX = clang++
 CXXFLAGS = -std=c++20 -Wall -Wextra -O3 -ffast-math -march=native -flto
-SRC = main.cpp constants.cpp board.cpp ai.cpp input.cpp ui.cpp
-HEADERS = constants.hpp board.hpp ai.hpp input.hpp ui.hpp
+SRC = main.cpp constants.cpp board.cpp ai.cpp input.cpp ui.cpp zobrist.cpp
+HEADERS = constants.hpp board.hpp ai.hpp input.hpp ui.hpp zobrist.hpp
 OUT = main
 
 # ncurses (wide-char) via Homebrew; keg-only, so not on default include/lib paths
