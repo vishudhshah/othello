@@ -57,12 +57,73 @@ The AI then plays out the game from the given position.
 ---
 
 ## Notes on 'AI'
+- **Board representation**: bitboards — the board is two 64-bit integers (one bit per square, one integer per color) instead of a grid. This makes move generation, flipping, and scoring fast bitwise operations instead of cell-by-cell loops.
+- **Opening book**: the first several moves of a game are often looked up instantly instead of searched — see [Opening book](#opening-book) below.
 - **Search**: Iterative deepening (IDDFS) with a time limit.
-- **Algorithm**: NegaScout (Principal Variation Search).
-- **Move ordering**: Moves are tried in priority order (corners → edges → inner cells → X-squares) to improve pruning efficiency.
+- **Algorithm**: NegaScout (Principal Variation Search) with alpha-beta pruning, sped up by a **transposition table** — a cache of positions already searched, keyed by a **Zobrist hash** (a fingerprint of the board that updates incrementally as moves are made, rather than being recomputed from scratch). This lets the AI skip re-searching positions it's already evaluated (which happens often — different move orders can reach the same board) and search noticeably deeper in the same time limit.
+- **Move ordering**: Moves are tried in priority order (corners → edges → inner cells → X-squares) to improve pruning efficiency, with a further boost from replaying whichever move the transposition table says worked best last time.
 - **Evaluation components**:
   - *Material*: positional weights per square
   - *Mobility*: relative number of legal moves available
   - *Stability*: discs that can never be flipped (corners, filled edges, enclosed interior)
   - *Frontier*: discs adjacent to empty squares (fewer is better)
 - **Dynamic danger correction**: static penalties for X/C-squares are lifted when the adjacent corner is already owned, since those squares are no longer a liability.
+
+---
+
+## Opening book
+
+The AI can consult a small pre-computed book of strong opening moves (`book.dat`) instead of searching from scratch. It's a lookup table from board position → best known move(s), built ahead of time by running the AI's own search over the opening tree.
+
+**Why it helps**: the very first few moves of Othello have been studied and mostly solved, and searching them live every game is wasted effort — a book move is free (returned instantly, no search) and just as strong.
+
+**A few things make it smarter than a plain move list**:
+- It's keyed by the *position on the board*, not the sequence of moves that reached it — so different move orders that land on the same board share one book entry.
+- It's keyed by *canonical* position — the board's 8 rotations/reflections (spin it 90°, flip it, etc.) are recognized as the same entry, so the book doesn't need a separate copy for every symmetric variation of a line.
+- Where multiple opening moves are genuinely equally good, the book stores all of them and picks one at random each time — so the AI doesn't play the exact same opening every single game.
+
+You'll see this in the recent-moves log / CSV export as a move with **depth `-1`** — that's the book's way of saying "no search happened, this came straight from the book."
+
+The book is **only ever used from the standard starting position onward** — it's silently skipped in Puzzle Mode (a custom position essentially never coincidentally matches a book entry), and it hands off to normal search automatically once you're past however many moves the book covers.
+
+### Generating / updating the book
+
+The book is built by running the game itself in a special headless mode — no ncurses, just prints progress and writes a file:
+
+```bash
+./main --gen-book --ply 10 --search-depth 10 --epsilon 100 --out book.dat
+```
+
+- `--ply <n>` — how many moves deep into the game to build the book (10 = book covers the first 10 moves).
+- `--search-depth <n>` — how deep the AI searches to *evaluate* each candidate move while building the book. Higher = stronger/slower book generation.
+- `--epsilon <n>` — how close a move's score has to be to the best move to *also* get included (and explored further) as an alternative. `0` = only the single best move is kept (a narrow, deterministic book); higher = more alternatives stored, more variety during play, but a much bigger tree to search — this can blow up generation time fast, so raise it gradually rather than jumping straight to a large value.
+- `--out <path>` — where to save the book (defaults to `book.dat`, which is what the game loads automatically on startup).
+
+Regenerating is always safe to re-run — each run starts from a clean slate and fully overwrites the output file, it never adds to what's already there.
+
+To inspect what's actually in a book file (position, move, score for every stored entry):
+
+```bash
+./main --book-dump book.dat
+```
+
+If `book.dat` is missing, the game just runs without one — search happens from the very first move instead, exactly like before the book existed. No error, no setup required to just play.
+
+---
+
+## Running the game without the TUI (developer/testing mode)
+
+Passing certain flags on the command line skips the ncurses screen entirely and runs one specific thing headlessly, printing plain text to the terminal. Useful for testing, benchmarking, or scripting — not needed for normal play.
+
+```bash
+./main --selfplay --time 2                     # play a full AI-vs-AI game, print every move
+./main --search --time 5                       # get the AI's move for the current position
+./main --search --fen "8/8/8/3WB3/3BW3/8/8/8" --player B   # ...from a specific position
+./main --perft 6                                # count reachable positions N moves out (move-generator correctness check)
+./main --gen-book --ply 10 --search-depth 10 --epsilon 100 # build/update the opening book (see above)
+./main --book-dump book.dat                     # print every entry in a book file
+```
+
+Common options across these: `--fen <string>` / `--64 <string>` load a starting position (same formats as Puzzle Mode above; defaults to the standard starting position if neither is given), `--player B|W` sets whose turn it is, `--time <seconds>` sets the AI's thinking time. A couple of flags exist purely for verifying the engine is behaving correctly and aren't needed day-to-day: `--verify-zobrist` (with `--perft`) and `--no-tt` / `--search --fixed-depth <n>` (with `--search`).
+
+Running `./main` with none of these flags starts the normal interactive game exactly as before — nothing about regular play has changed.

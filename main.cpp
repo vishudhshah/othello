@@ -1,4 +1,4 @@
-// clang++ -std=c++20 main.cpp constants.cpp board.cpp ai.cpp input.cpp -o main
+// See Makefile for the real build; `make` is the supported way to build this project.
 
 #include "constants.hpp"
 #include "board.hpp"
