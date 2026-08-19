@@ -325,8 +325,16 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
     // Get the sorted valid moves for the current player
     std::vector<std::pair<int, int>> sorted_moves = get_sorted_moves(player);
 
-    // If there's only one valid move, return it immediately
+    // If there's only one valid move, return it immediately (no search).
+    // Still report a real score instead of leaving out_score/out_depth unset:
+    // a static evaluation of the resulting position, same as the depth == 0
+    // leaf case below, at negligible cost (no recursion into the opponent).
     if (sorted_moves.size() == 1) {
+        Board board_copy = board;
+        make_move(sorted_moves[0].first, sorted_moves[0].second, player);
+        out_score = evaluate_board(player, game_phase());
+        board = board_copy;
+        out_depth = 0;
         return sorted_moves[0];
     }
 
