@@ -256,10 +256,12 @@ int negascout(int depth, int alpha, int beta, char player) {
             int player1_score = scores.first;
             int player2_score = scores.second;
 
-            if (player1_score > player2_score) {
-                return (player == PLAYER1) ? (1000000 + evaluate_board(player, phase)) : -(1000000 + evaluate_board(opponent, phase));
-            } else if (player2_score > player1_score) {
-                return (player == PLAYER2) ? (1000000 + evaluate_board(player, phase)) : -(1000000 + evaluate_board(opponent, phase));
+            if (player1_score != player2_score) {
+                char winner = (player1_score > player2_score) ? PLAYER1 : PLAYER2;
+                // Winning sooner (more of the search depth left unused) matters far more
+                // than winning by a bigger margin, so the depth term dominates the eval margin.
+                int win_score = 1000000 + depth * 100000 + evaluate_board(winner, phase);
+                return (player == winner) ? win_score : -win_score;
             } else {
                 return 0;
             }
