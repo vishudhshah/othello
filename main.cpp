@@ -32,11 +32,19 @@ using namespace std;
 // by make_move) matches a from-scratch compute_hash() at every node visited —
 // this is --verify-zobrist's actual check. On mismatch, prints the offending
 // position depth and aborts the traversal early (returns 0, caller reports).
+//
+// Note: this file previously also carried a --verify-bitboard dual-run check
+// here, comparing the standalone bitboard.cpp move generator against the
+// char-array compute_valid_moves() at every node (Phase 3's parity-testing
+// window). That check passed cleanly (perft depths 1-8, plus hand-crafted
+// edge-column and near-full-board positions) and was removed once board.cpp
+// itself became bitboard-backed — there's no longer a separate char-array
+// implementation left to compare against.
 static bool zobrist_mismatch_found = false;
 static uint64_t perft(int depth, char player, bool verify_zobrist) {
-    if (verify_zobrist && !zobrist_mismatch_found && current_hash != compute_hash(board)) {
+    if (verify_zobrist && !zobrist_mismatch_found && current_hash != compute_hash(black_bb, white_bb)) {
         printf("ZOBRIST MISMATCH at perft depth=%d: current_hash=%llu compute_hash=%llu\n",
-            depth, (unsigned long long)current_hash, (unsigned long long)compute_hash(board));
+            depth, (unsigned long long)current_hash, (unsigned long long)compute_hash(black_bb, white_bb));
         zobrist_mismatch_found = true;
     }
     if (depth == 0) return 1;
@@ -182,7 +190,7 @@ int main(int argc, char** argv) {
     struct UiGuard { ~UiGuard() { ui_teardown(); } } ui_guard;
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { Board board; uint64_t hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; };
+    struct Snapshot { uint64_t black_bb, white_bb, hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; };
 
     // Outer loop: each iteration is one full game, from mode selection to game over.
     // play_again controls whether we loop back for a new game or exit after the inner loop.
@@ -298,7 +306,8 @@ int main(int argc, char** argv) {
                                     history.pop_back();
                                 }
                             }
-                            board = restored.board;
+                            black_bb = restored.black_bb;
+                            white_bb = restored.white_bb;
                             current_hash = restored.hash;
                             current_player = restored.player;
                             move_number = restored.move_num - 1; // -1 so loop's ++ restores correct number
@@ -348,7 +357,7 @@ int main(int argc, char** argv) {
 
             // Save board state to history before making the move
             string move_str = {(char)('A' + col), (char)('1' + row)};
-            history.push_back({board, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth});
+            history.push_back({black_bb, white_bb, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth});
 
             // Make the move
             last_move = {row, col};

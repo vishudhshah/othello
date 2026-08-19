@@ -15,13 +15,11 @@ void init_zobrist_table() {
     ZOBRIST_TURN = rng();
 }
 
-uint64_t compute_hash(const Board& b) {
+uint64_t compute_hash(uint64_t black_bb, uint64_t white_bb) {
     uint64_t h = 0;
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (b[i][j] == PLAYER1) h ^= ZOBRIST_TABLE[0][i * BOARD_SIZE + j];
-            else if (b[i][j] == PLAYER2) h ^= ZOBRIST_TABLE[1][i * BOARD_SIZE + j];
-        }
-    }
+    uint64_t bb = black_bb;
+    while (bb) { int sq = __builtin_ctzll(bb); h ^= ZOBRIST_TABLE[0][sq]; bb &= bb - 1; }
+    bb = white_bb;
+    while (bb) { int sq = __builtin_ctzll(bb); h ^= ZOBRIST_TABLE[1][sq]; bb &= bb - 1; }
     return h;
 }

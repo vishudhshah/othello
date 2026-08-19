@@ -1,10 +1,7 @@
 #include "constants.hpp"
 
-Board board = [] {
-    Board b;
-    for (auto& row : b) row.fill(EMPTY);
-    return b;
-}();
+uint64_t black_bb = 0;
+uint64_t white_bb = 0;
 std::pair<int,int> last_move = {-1, -1};
 
 // Weighted piece counter for the evaluation function

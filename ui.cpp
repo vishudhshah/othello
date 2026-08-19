@@ -176,7 +176,7 @@ void draw_board(char current_player, bool show_hints = true) {
         addstr(v_border);
         for (int j = 0; j < BOARD_SIZE; j++) {
             addch(' ');
-            char c = board[i][j];
+            char c = cell_at(i, j);
             bool last = (last_move.first == i && last_move.second == j);
             bool hint = (c == EMPTY && is_hint(i, j));
 

@@ -30,4 +30,4 @@ void init_zobrist_table();
 // (re)initialize current_hash after a position is set up wholesale
 // (initialize_board/parse_fen/parse_64char), and as the ground truth for
 // verifying incremental updates never drift (see main.cpp's --verify-zobrist).
-uint64_t compute_hash(const Board& b);
+uint64_t compute_hash(uint64_t black_bb, uint64_t white_bb);

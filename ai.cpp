@@ -2,23 +2,14 @@
 #include "board.hpp"
 #include "zobrist.hpp"
 #include "tt.hpp"
+#include "bitboard.hpp"
 #include <limits>
 #include <algorithm>
 
 uint64_t node_count = 0;
 
 int game_phase() {
-    // Initialize a counter for the total number of discs on the board
-    int total_discs = 0;
-
-    // Iterate through all cells in the board and count the number of discs on the board
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] == PLAYER1 || board[i][j] == PLAYER2) {
-                total_discs++;
-            }
-        }
-    }
+    int total_discs = __builtin_popcountll(black_bb | white_bb);
 
     // Determine the game phase based on the total number of discs
     switch (total_discs) {
@@ -46,24 +37,24 @@ static std::pair<int,int> count_stable_both() {
     const int corners[4][2] = {{0,0},{0,BOARD_SIZE-1},{BOARD_SIZE-1,0},{BOARD_SIZE-1,BOARD_SIZE-1}};
     for (auto& c : corners)
         for (int p = 0; p < 2; p++)
-            if (board[c[0]][c[1]] == players[p])
+            if (cell_at(c[0], c[1]) == players[p])
                 stable[p][c[0]][c[1]] = true;
 
     // Pass 2: edges — propagate from stable corners along each edge
     for (int row : {0, BOARD_SIZE-1}) {
         for (int p = 0; p < 2; p++) {
             for (int j = 1; j < BOARD_SIZE; j++)
-                if (board[row][j] == players[p] && stable[p][row][j-1]) stable[p][row][j] = true;
+                if (cell_at(row, j) == players[p] && stable[p][row][j-1]) stable[p][row][j] = true;
             for (int j = BOARD_SIZE - 2; j >= 0; j--)
-                if (board[row][j] == players[p] && stable[p][row][j+1]) stable[p][row][j] = true;
+                if (cell_at(row, j) == players[p] && stable[p][row][j+1]) stable[p][row][j] = true;
         }
     }
     for (int col : {0, BOARD_SIZE-1}) {
         for (int p = 0; p < 2; p++) {
             for (int i = 1; i < BOARD_SIZE; i++)
-                if (board[i][col] == players[p] && stable[p][i-1][col]) stable[p][i][col] = true;
+                if (cell_at(i, col) == players[p] && stable[p][i-1][col]) stable[p][i][col] = true;
             for (int i = BOARD_SIZE - 2; i >= 0; i--)
-                if (board[i][col] == players[p] && stable[p][i+1][col]) stable[p][i][col] = true;
+                if (cell_at(i, col) == players[p] && stable[p][i+1][col]) stable[p][i][col] = true;
         }
     }
 
@@ -76,7 +67,7 @@ static std::pair<int,int> count_stable_both() {
         for (int i = 0; i < BOARD_SIZE; i++) {
             for (int j = 0; j < BOARD_SIZE; j++) {
                 for (int p = 0; p < 2; p++) {
-                    if (board[i][j] != players[p] || stable[p][i][j]) continue;
+                    if (cell_at(i, j) != players[p] || stable[p][i][j]) continue;
                     bool all_ok = true;
                     for (auto& ax : axes) {
                         int dr = ax[0], dc = ax[1];
@@ -126,7 +117,7 @@ static int dynamic_danger_correction(char piece_player) {
     };
     int correction = 0;
     for (const auto& ds : DANGER_SQUARES) {
-        if (board[ds.r][ds.c] == piece_player && board[ds.cr][ds.cc] == piece_player) {
+        if (cell_at(ds.r, ds.c) == piece_player && cell_at(ds.cr, ds.cc) == piece_player) {
             // undo the static penalty and apply a positive bonus
             correction += ds.corrected_bonus - ds.base_penalty;
         }
@@ -139,10 +130,10 @@ static int count_frontier_discs(char player) {
     int count = 0;
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] != player) continue;
+            if (cell_at(i, j) != player) continue;
             for (auto& d : dirs) {
                 int ni = i + d[0], nj = j + d[1];
-                if (ni >= 0 && ni < BOARD_SIZE && nj >= 0 && nj < BOARD_SIZE && board[ni][nj] == EMPTY) {
+                if (ni >= 0 && ni < BOARD_SIZE && nj >= 0 && nj < BOARD_SIZE && cell_at(ni, nj) == EMPTY) {
                     count++;
                     break;
                 }
@@ -157,28 +148,29 @@ int evaluate_board(char player, int phase) {
 
     // Phase 4: raw disc count only
     if (phase == 4) {
-        int p1 = 0, p2 = 0;
-        for (int i = 0; i < BOARD_SIZE; i++)
-            for (int j = 0; j < BOARD_SIZE; j++) {
-                if (board[i][j] == PLAYER1) p1++;
-                else if (board[i][j] == PLAYER2) p2++;
-            }
+        int p1 = __builtin_popcountll(black_bb);
+        int p2 = __builtin_popcountll(white_bb);
         return (player == PLAYER1) ? p1 - p2 : p2 - p1;
     }
 
     const PhaseWeights& w = PHASE_WEIGHTS[phase];
 
-    // Single loop: position weights + mobility counts
+    // Mobility: popcount of the legal-move bitmask, O(1) instead of the old
+    // per-cell is_valid_move scan (which itself would now recompute the same
+    // move mask up to 128 times over).
+    uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
+    uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
+    int player_moves = __builtin_popcountll(bb_get_moves(player_bb, opp_bb));
+    int opponent_moves = __builtin_popcountll(bb_get_moves(opp_bb, player_bb));
+
+    // Position weights
     int player1_pos = 0, player2_pos = 0;
-    int player_moves = 0, opponent_moves = 0;
     for (int i = 0; i < BOARD_SIZE; i++) {
         for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] == EMPTY) {
-                if (is_valid_move(i, j, player))   player_moves++;
-                if (is_valid_move(i, j, opponent)) opponent_moves++;
-            } else if (board[i][j] == PLAYER1) {
+            char c = cell_at(i, j);
+            if (c == PLAYER1) {
                 player1_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
-            } else if (board[i][j] == PLAYER2) {
+            } else if (c == PLAYER2) {
                 player2_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
             }
         }
@@ -397,14 +389,7 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
     int best_depth = 0;
 
     // Get the number of empty cells on the board
-    int empty_cells = 0;
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] == EMPTY) {
-                empty_cells++;
-            }
-        }
-    }
+    int empty_cells = BOARD_SIZE * BOARD_SIZE - __builtin_popcountll(black_bb | white_bb);
 
     // While time is left and depth is less than the number of empty cells
     while (std::chrono::steady_clock::now() < end_time && current_depth <= empty_cells) {
