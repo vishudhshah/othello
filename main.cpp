@@ -157,12 +157,23 @@ static int run_headless(int argc, char** argv) {
         return def;
     };
 
+    if (has_flag("--book-dump")) {
+        string path = get_val("--book-dump", "book.dat");
+        if (!book_load(path)) {
+            printf("ERROR failed to load %s\n", path.c_str());
+            return 1;
+        }
+        book_dump_all();
+        return 0;
+    }
+
     if (has_flag("--gen-book")) {
         int ply = stoi(get_val("--ply", "6"));
         int search_depth = stoi(get_val("--search-depth", "8"));
         int epsilon = stoi(get_val("--epsilon", "0"));
         string out_path = get_val("--out", "book.dat");
         initialize_board();
+        book_clear();
         book_clear_visited();
         generate_book_recursive(ply, search_depth, PLAYER1, epsilon);
         book_finalize();

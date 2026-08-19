@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <fstream>
 #include <random>
+#include <cstdio>
 
 namespace {
 
@@ -43,6 +44,10 @@ bool same_key(const BookRecord& a, const BookRecord& b) {
 }
 
 } // namespace
+
+void book_clear() {
+    g_book.clear();
+}
 
 void book_add(uint64_t black_bb, uint64_t white_bb, char player, int row, int col, int score) {
     Canon c = canonicalize(black_bb, white_bb);
@@ -90,6 +95,14 @@ bool book_load(const std::string& path) {
 
 bool book_loaded() { return !g_book.empty(); }
 size_t book_size() { return g_book.size(); }
+
+void book_dump_all() {
+    for (const auto& r : g_book) {
+        printf("black=%016llx white=%016llx player=%c move=(%d,%d) score=%d\n",
+            (unsigned long long)r.black, (unsigned long long)r.white, r.player,
+            r.move_row, r.move_col, r.score);
+    }
+}
 
 bool book_probe(uint64_t black_bb, uint64_t white_bb, char player, std::pair<int, int>& out_move, int& out_score) {
     if (g_book.empty()) return false;

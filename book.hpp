@@ -28,6 +28,9 @@ bool book_save(const std::string& path);
 bool book_loaded();
 size_t book_size();
 
+// Debug/inspection only (main.cpp's --book-dump): prints every record.
+void book_dump_all();
+
 // Probes for (black_bb, white_bb) with `player` to move. On a hit, fills
 // out_move (already mapped back to the position's actual orientation, not
 // the canonical one) and out_score, and returns true. When multiple
@@ -36,6 +39,11 @@ size_t book_size();
 bool book_probe(uint64_t black_bb, uint64_t white_bb, char player, std::pair<int, int>& out_move, int& out_score);
 
 // --- Generation-only API (used by main.cpp's --gen-book) ---
+
+// Discards any in-memory book records (e.g. from a startup book_load) —
+// --gen-book must call this before generating, so a fresh run never
+// accumulates duplicate/stale records on top of a previously-generated file.
+void book_clear();
 
 // Adds one (position, move, score) to the in-memory book, keyed by the
 // canonical form of (black_bb, white_bb, player). The move is stored
