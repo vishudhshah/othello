@@ -4,6 +4,7 @@
 #include "input.hpp"
 
 #include <ncurses.h>
+#include <algorithm>
 #include <clocale>
 #include <csignal>
 #include <cstdlib>
@@ -44,10 +45,10 @@ constexpr int ROW_LEGEND = ROW_MESSAGE + 1;
 constexpr int ROW_LOG_HEADER = ROW_LEGEND + 2; // blank line, then header
 constexpr int ROW_LOG_START = ROW_LOG_HEADER + 1;
 
-constexpr size_t MOVE_LOG_CAPACITY = 10;
+constexpr size_t MOVE_LOG_VISIBLE = 10; // number of log lines shown at once
 
 constexpr int MIN_COLS = 42;
-constexpr int MIN_ROWS = ROW_LOG_START + (int)MOVE_LOG_CAPACITY + 2;
+constexpr int MIN_ROWS = ROW_LOG_START + (int)MOVE_LOG_VISIBLE + 2;
 
 constexpr int PAIR_DISC_NORMAL = 1;
 constexpr int PAIR_DISC_LASTMOVE = 2;
@@ -62,6 +63,7 @@ enum class ClickResult { Cell, Outside, Ambiguous };
 struct ClickOutcome { ClickResult result; int row; int col; };
 volatile sig_atomic_t g_resized = 0;
 std::deque<std::string> g_move_log;
+int g_log_scroll = 0; // entries scrolled back from the newest (0 = showing the latest)
 
 bool detect_unicode() {
     auto has_utf8 = [](const char* s) -> bool {
@@ -216,14 +218,30 @@ void draw_chrome(char current_player, const std::string& status_line) {
 }
 
 void draw_move_log() {
-    mvaddstr(AY(ROW_LOG_HEADER), AX(0), "Recent moves:");
+    int total = (int)g_move_log.size();
+    int max_scroll = std::max(0, total - (int)MOVE_LOG_VISIBLE);
+    if (g_log_scroll > max_scroll) g_log_scroll = max_scroll;
+    if (g_log_scroll < 0) g_log_scroll = 0;
+
+    move(AY(ROW_LOG_HEADER), AX(0)); clrtoeol();
+    std::string header = "Recent moves:";
+    if (total > (int)MOVE_LOG_VISIBLE) {
+        int end = total - g_log_scroll;              // exclusive, chronological order
+        int start = end - (int)MOVE_LOG_VISIBLE;
+        header = std::format("Recent moves ({}-{} of {})  |  {} or j/k to scroll",
+                              start + 1, end, total, g_unicode ? "↑/↓" : "Up/Down");
+    }
+    mvaddstr(AY(ROW_LOG_HEADER), AX(0), header.c_str());
+
+    int end = total - g_log_scroll;
+    int start = std::max(0, end - (int)MOVE_LOG_VISIBLE);
     int i = 0;
-    for (auto it = g_move_log.rbegin(); it != g_move_log.rend(); ++it, ++i) {
+    for (int idx = end - 1; idx >= start; idx--, i++) {
         move(AY(ROW_LOG_START + i), AX(0));
         clrtoeol();
-        mvaddstr(AY(ROW_LOG_START + i), AX(0), it->c_str());
+        mvaddstr(AY(ROW_LOG_START + i), AX(0), g_move_log[idx].c_str());
     }
-    for (; i < (int)MOVE_LOG_CAPACITY; i++) {
+    for (; i < (int)MOVE_LOG_VISIBLE; i++) {
         move(AY(ROW_LOG_START + i), AX(0));
         clrtoeol();
     }
@@ -340,11 +358,18 @@ void ui_teardown() {
 
 void log_move(const std::string& text) {
     g_move_log.push_back(text);
-    if (g_move_log.size() > MOVE_LOG_CAPACITY) g_move_log.pop_front();
+    g_log_scroll = 0; // snap back to the newest entry whenever a move is logged
 }
 
 void clear_move_log() {
     g_move_log.clear();
+    g_log_scroll = 0;
+}
+
+void scroll_move_log(int delta) {
+    g_log_scroll = std::max(0, g_log_scroll + delta);
+    draw_move_log();
+    refresh();
 }
 
 void discard_pending_input() {
@@ -394,8 +419,14 @@ bool render_winning_screen(char resigned_by) {
     refresh();
 
     nodelay(stdscr, FALSE);
-    int key = getch();
-    return key == 'n' || key == 'N';
+    for (;;) {
+        int key = getch();
+        if (key == KEY_UP || key == 'k') { scroll_move_log(-1); continue; }
+        if (key == KEY_DOWN || key == 'j') { scroll_move_log(1); continue; }
+        if (key == KEY_PPAGE) { scroll_move_log(-(int)MOVE_LOG_VISIBLE); continue; }
+        if (key == KEY_NPAGE) { scroll_move_log((int)MOVE_LOG_VISIBLE); continue; }
+        return key == 'n' || key == 'N';
+    }
 }
 
 // ---- input.hpp definitions (moved here from input.cpp so they can use curses) ----
@@ -468,6 +499,11 @@ std::pair<int, int> get_user_input() {
             continue;
         }
         if (ch == KEY_RESIZE) continue;
+
+        if (ch == KEY_UP || ch == 'k') { scroll_move_log(-1); continue; }
+        if (ch == KEY_DOWN || ch == 'j') { scroll_move_log(1); continue; }
+        if (ch == KEY_PPAGE) { scroll_move_log(-(int)MOVE_LOG_VISIBLE); continue; }
+        if (ch == KEY_NPAGE) { scroll_move_log((int)MOVE_LOG_VISIBLE); continue; }
 
         if (typed.empty() && (ch == 'u' || ch == 'U')) return {-1, -1};
         if (typed.empty() && (ch == 'r' || ch == 'R')) return {-2, -2};
