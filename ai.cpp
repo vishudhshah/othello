@@ -3,6 +3,7 @@
 #include "zobrist.hpp"
 #include "tt.hpp"
 #include "bitboard.hpp"
+#include "book.hpp"
 #include <limits>
 #include <algorithm>
 
@@ -364,6 +365,24 @@ int negascout(int depth, int alpha, int beta, char player) {
 
 std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
     node_count = 0;
+
+    // Opening book probe. Keyed by canonical (symmetry-normalized) position,
+    // so this also naturally never fires on an arbitrary puzzle-mode start
+    // position (no explicit puzzle-mode flag needed): the book only
+    // contains positions reachable from the standard opening, and a
+    // hand-entered puzzle position coincidentally matching one of those is
+    // not a real risk. is_valid_move is a defense-in-depth check against
+    // any residual symmetry-transform bug — the book must never hand back
+    // an illegal move.
+    std::pair<int, int> book_move;
+    int book_score;
+    if (book_probe(black_bb, white_bb, player, book_move, book_score) &&
+        is_valid_move(book_move.first, book_move.second, player)) {
+        out_score = book_score;
+        out_depth = -1; // sentinel: move came from the book, not a live search
+        return book_move;
+    }
+
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
     auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(time_limit);
 

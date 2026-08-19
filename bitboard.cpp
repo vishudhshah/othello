@@ -68,3 +68,38 @@ std::vector<std::pair<int, int>> bb_to_coords(uint64_t bb) {
     }
     return out;
 }
+
+namespace {
+
+inline std::pair<int, int> transform_coord(int r, int c, int t) {
+    switch (t) {
+        case 0: return {r, c};           // identity
+        case 1: return {c, 7 - r};       // rotate 90 cw
+        case 2: return {7 - r, 7 - c};   // rotate 180
+        case 3: return {7 - c, r};       // rotate 270 cw
+        case 4: return {r, 7 - c};       // mirror columns
+        case 5: return {c, r};           // transpose
+        case 6: return {7 - r, c};       // flip rows
+        case 7: return {7 - c, 7 - r};   // anti-transpose
+        default: return {r, c};
+    }
+}
+
+} // namespace
+
+uint64_t bb_apply_transform(uint64_t bb, int t) {
+    uint64_t result = 0;
+    while (bb) {
+        int sq = __builtin_ctzll(bb);
+        bb &= bb - 1;
+        auto [nr, nc] = transform_coord(sq / 8, sq % 8, t);
+        result |= (1ULL << (nr * 8 + nc));
+    }
+    return result;
+}
+
+int bb_inverse_transform(int t) {
+    // Every transform is its own inverse except the 90/270 rotation pair.
+    static const int inv[8] = {0, 3, 2, 1, 4, 5, 6, 7};
+    return inv[t];
+}

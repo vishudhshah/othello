@@ -27,3 +27,19 @@ uint64_t bb_flip_mask(uint64_t player_bb, uint64_t opp_bb, uint64_t move_bit);
 // square index. Used for parity-testing against compute_valid_moves() and,
 // later, for iterating flipped squares without a nested loop.
 std::vector<std::pair<int, int>> bb_to_coords(uint64_t bb);
+
+// The 8 symmetries of a square board (the dihedral group D4): 4 rotations
+// times {identity, mirror}. Transform indices:
+//   0 = identity          4 = mirror (flip columns)
+//   1 = rotate 90 cw       5 = transpose (mirror + rotate90)
+//   2 = rotate 180         6 = flip rows (mirror + rotate180)
+//   3 = rotate 270 cw      7 = anti-transpose (mirror + rotate270)
+// Used by book.cpp to canonicalize a position across all 8 orientations so
+// the opening book's position keys catch transpositions-by-symmetry, not
+// just transpositions-by-move-order. Not a hot-path operation (book lookups
+// happen once per predict_move() call, not per search node), so this is a
+// straightforward per-bit remap rather than a SWAR bit-permutation trick.
+uint64_t bb_apply_transform(uint64_t bb, int t);
+
+// The transform that undoes `t` (t composed with its inverse is identity).
+int bb_inverse_transform(int t);
