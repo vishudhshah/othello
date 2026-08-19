@@ -7,8 +7,114 @@
 #include "ui.hpp"
 #include <format>
 #include <limits>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
 
 using namespace std;
+
+// --- Headless CLI mode -----------------------------------------------------
+// Non-interactive entry points used for regression testing the engine (perft,
+// self-play, single-position search) without going through the ncurses TUI.
+// See the plan doc's Phase 0 for rationale; this is the harness every later
+// phase (Zobrist/TT/bitboard/book) verifies itself against.
+
+// Full-width node count to a fixed remaining ply depth. A pass (no legal
+// moves for the side to move) does not consume a ply, matching negascout's
+// own pass convention (ai.cpp) so perft node counts stay meaningful as a
+// baseline for that search.
+static uint64_t perft(int depth, char player) {
+    if (depth == 0) return 1;
+    if (is_game_over()) return 1;
+    auto moves = compute_valid_moves(player);
+    if (moves.empty()) {
+        return perft(depth, get_opponent(player));
+    }
+    uint64_t nodes = 0;
+    for (auto& mv : moves) {
+        Board board_copy = board;
+        make_move(mv.first, mv.second, player);
+        nodes += perft(depth - 1, get_opponent(player));
+        board = board_copy;
+    }
+    return nodes;
+}
+
+// Loads a starting position from --fen/--64 if given, else the standard
+// initial position. Returns false (and prints an error) on a bad position string.
+static bool load_headless_position(const string& fen, const string& s64) {
+    if (!fen.empty()) {
+        if (!parse_fen(fen)) { printf("ERROR invalid --fen\n"); return false; }
+    } else if (!s64.empty()) {
+        if (!parse_64char(s64)) { printf("ERROR invalid --64\n"); return false; }
+    } else {
+        initialize_board();
+    }
+    return true;
+}
+
+// Returns 0/1 (a real exit code) if argv requested a headless mode and it ran;
+// returns -1 if no headless flag was present, meaning the normal TUI should start.
+static int run_headless(int argc, char** argv) {
+    vector<string> args(argv + 1, argv + argc);
+    auto has_flag = [&](const string& f) { return find(args.begin(), args.end(), f) != args.end(); };
+    auto get_val = [&](const string& f, const string& def = "") -> string {
+        auto it = find(args.begin(), args.end(), f);
+        if (it != args.end() && next(it) != args.end()) return *next(it);
+        return def;
+    };
+
+    if (has_flag("--perft")) {
+        int depth = stoi(get_val("--perft", "1"));
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+        uint64_t nodes = perft(depth, player);
+        printf("PERFT depth=%d nodes=%llu\n", depth, (unsigned long long)nodes);
+        return 0;
+    }
+
+    if (has_flag("--selfplay")) {
+        int time_limit = stoi(get_val("--time", to_string(DEFAULT_TIME_LIMIT)));
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char current_player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+        int move_number = 0;
+        while (!is_game_over()) {
+            if (turn_skip(current_player)) {
+                current_player = get_opponent(current_player);
+                continue;
+            }
+            move_number++;
+            int score, out_depth;
+            pair<int, int> mv = predict_move(current_player, time_limit, score, out_depth);
+            make_move(mv.first, mv.second, current_player);
+            printf("MOVE %d %c %c%d SCORE %d DEPTH %d NODES %llu\n",
+                move_number, current_player, (char)('A' + mv.second), mv.first + 1,
+                score, out_depth, (unsigned long long)node_count);
+            current_player = get_opponent(current_player);
+        }
+        auto [b_score, w_score] = calculate_scores();
+        printf("RESULT BLACK %d WHITE %d\n", b_score, w_score);
+        return 0;
+    }
+
+    if (has_flag("--search")) {
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+        int time_limit = stoi(get_val("--time", to_string(DEFAULT_TIME_LIMIT)));
+        int score, out_depth;
+        pair<int, int> mv = predict_move(player, time_limit, score, out_depth);
+        printf("MOVE %c%d SCORE %d DEPTH %d NODES %llu\n",
+            (char)('A' + mv.second), mv.first + 1, score, out_depth, (unsigned long long)node_count);
+        return 0;
+    }
+
+    return -1;
+}
 
 /**
  * @brief Othello game
@@ -16,7 +122,10 @@ using namespace std;
  * @author Vishudh Shah
  * @since 2024-06-26
  */
-int main() {
+int main(int argc, char** argv) {
+    int headless_result = run_headless(argc, argv);
+    if (headless_result >= 0) return headless_result;
+
     ui_init();
     struct UiGuard { ~UiGuard() { ui_teardown(); } } ui_guard;
 

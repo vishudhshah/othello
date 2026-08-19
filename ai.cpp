@@ -3,6 +3,8 @@
 #include <limits>
 #include <algorithm>
 
+uint64_t node_count = 0;
+
 int game_phase() {
     // Initialize a counter for the total number of discs on the board
     int total_discs = 0;
@@ -244,6 +246,7 @@ std::vector<std::pair<int, int>> get_sorted_moves(char player) {
 }
 
 int negascout(int depth, int alpha, int beta, char player) {
+    node_count++;
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
     // Base case: game is over or depth limit reached
@@ -319,6 +322,7 @@ int negascout(int depth, int alpha, int beta, char player) {
 }
 
 std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
+    node_count = 0;
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
     auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(time_limit);
 
