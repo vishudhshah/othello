@@ -1,5 +1,7 @@
 #include "ai.hpp"
 #include "board.hpp"
+#include "zobrist.hpp"
+#include "tt.hpp"
 #include <limits>
 #include <algorithm>
 
@@ -286,6 +288,46 @@ int negascout(int depth, int alpha, int beta, char player) {
         return -negascout(depth, -beta, -alpha, opponent);
     }
 
+    // Transposition table probe. Terminal (game-over) and depth==0 leaf
+    // returns above are deliberately never cached: the game-over branch's
+    // win_score encodes remaining depth (1000000 + depth*100000 + eval), so
+    // reusing it from a different depth context would misrepresent how fast
+    // the win is — the classic TT+mate-score bug. Only real internal search
+    // nodes (which reach this point) are cached.
+    int orig_alpha = alpha;
+    int orig_beta = beta;
+    uint64_t tt_key = current_hash ^ (player == PLAYER2 ? ZOBRIST_TURN : 0);
+    std::pair<int, int> tt_move = {-1, -1};
+
+    const TTEntry* entry = tt_probe(tt_key);
+    if (entry) {
+        tt_move = {entry->move_row, entry->move_col};
+        if (entry->depth >= depth) {
+            if (entry->bound == BOUND_EXACT) {
+                return entry->score;
+            } else if (entry->bound == BOUND_LOWER) {
+                alpha = std::max(alpha, entry->score);
+            } else if (entry->bound == BOUND_UPPER) {
+                beta = std::min(beta, entry->score);
+            }
+            if (alpha >= beta) {
+                return entry->score;
+            }
+        }
+    }
+
+    // Move ordering: try the TT-suggested move first (even from a shallower
+    // depth, where it's just a good guess rather than a reusable score) —
+    // this is usually the single biggest lever for alpha-beta cutoff rate.
+    if (tt_move.first >= 0) {
+        auto it = std::find(sorted_moves.begin(), sorted_moves.end(), tt_move);
+        if (it != sorted_moves.end()) {
+            std::iter_swap(sorted_moves.begin(), it);
+        }
+    }
+
+    std::pair<int, int> best_move_found = sorted_moves[0];
+
     // Iterate through all sorted (valid) moves
     for (int idx = 0; idx < (int)sorted_moves.size(); idx++) {
         int i = sorted_moves[idx].first;
@@ -308,7 +350,10 @@ int negascout(int depth, int alpha, int beta, char player) {
         unmake_move(undo);
 
         // Update the best score
-        best_score = std::max(best_score, score);
+        if (score > best_score) {
+            best_score = score;
+            best_move_found = {i, j};
+        }
         alpha = std::max(alpha, score);
 
         // Perform alpha-beta pruning
@@ -316,6 +361,11 @@ int negascout(int depth, int alpha, int beta, char player) {
             break;
         }
     }
+
+    uint8_t bound = (best_score <= orig_alpha) ? BOUND_UPPER
+                   : (best_score >= orig_beta)  ? BOUND_LOWER
+                   :                              BOUND_EXACT;
+    tt_store(tt_key, depth, best_score, bound, best_move_found);
 
     return best_score;
 }
@@ -395,6 +445,14 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
             best_depth = current_depth;
             best_score = current_best_score;
             best_move = current_best_move;
+
+            // Try this depth's best move first at the next (deeper) iteration —
+            // a strong ordering guess that also gets a real TT-move hint once
+            // negascout re-visits the root position at the new depth.
+            auto it = std::find(sorted_moves.begin(), sorted_moves.end(), current_best_move);
+            if (it != sorted_moves.end() && it != sorted_moves.begin()) {
+                std::iter_swap(sorted_moves.begin(), it);
+            }
         } else {
             // If we didn't complete the depth, we ran out of time
             break;

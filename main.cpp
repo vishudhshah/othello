@@ -6,6 +6,7 @@
 #include "input.hpp"
 #include "ui.hpp"
 #include "zobrist.hpp"
+#include "tt.hpp"
 #include <format>
 #include <limits>
 #include <vector>
@@ -66,6 +67,28 @@ static bool load_headless_position(const string& fen, const string& s64) {
     return true;
 }
 
+// Fixed-depth root search, bypassing predict_move's time-based IDDFS budget.
+// Used only by --search --fixed-depth, for an exact apples-to-apples TT-on
+// vs TT-off (--no-tt) comparison at a controlled depth — predict_move's own
+// time-boxed search can legitimately reach a different depth run-to-run.
+static pair<int, int> search_fixed_depth(char player, int depth, int& out_score) {
+    char opponent = get_opponent(player);
+    vector<pair<int, int>> moves = get_sorted_moves(player);
+    pair<int, int> best_move = moves[0];
+    int best_score = numeric_limits<int>::min();
+    for (auto& mv : moves) {
+        MoveUndo undo = make_move_undoable(mv.first, mv.second, player);
+        int score = -negascout(depth - 1, numeric_limits<int>::min() + 1, numeric_limits<int>::max(), opponent);
+        unmake_move(undo);
+        if (score > best_score) {
+            best_score = score;
+            best_move = mv;
+        }
+    }
+    out_score = best_score;
+    return best_move;
+}
+
 // Returns 0/1 (a real exit code) if argv requested a headless mode and it ran;
 // returns -1 if no headless flag was present, meaning the normal TUI should start.
 static int run_headless(int argc, char** argv) {
@@ -116,9 +139,21 @@ static int run_headless(int argc, char** argv) {
     }
 
     if (has_flag("--search")) {
+        if (has_flag("--no-tt")) tt_set_enabled(false);
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
         string pl = get_val("--player", "B");
         char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+
+        if (has_flag("--fixed-depth")) {
+            int depth = stoi(get_val("--fixed-depth", "1"));
+            node_count = 0;
+            int score;
+            pair<int, int> mv = search_fixed_depth(player, depth, score);
+            printf("MOVE %c%d SCORE %d DEPTH %d NODES %llu\n",
+                (char)('A' + mv.second), mv.first + 1, score, depth, (unsigned long long)node_count);
+            return 0;
+        }
+
         int time_limit = stoi(get_val("--time", to_string(DEFAULT_TIME_LIMIT)));
         int score, out_depth;
         pair<int, int> mv = predict_move(player, time_limit, score, out_depth);
@@ -138,6 +173,7 @@ static int run_headless(int argc, char** argv) {
  */
 int main(int argc, char** argv) {
     init_zobrist_table();
+    tt_clear();
 
     int headless_result = run_headless(argc, argv);
     if (headless_result >= 0) return headless_result;
