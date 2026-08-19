@@ -11,7 +11,6 @@
 #include <cmath>
 #include <deque>
 #include <format>
-#include <optional>
 #include <functional>
 #include <string_view>
 
@@ -58,6 +57,9 @@ constexpr int PAIR_MENU_SELECTED = 4;
 bool g_colors_on = false;
 bool g_unicode = false;
 char g_last_player = PLAYER1;
+
+enum class ClickResult { Cell, Outside, Ambiguous };
+struct ClickOutcome { ClickResult result; int row; int col; };
 volatile sig_atomic_t g_resized = 0;
 std::deque<std::string> g_move_log;
 
@@ -102,15 +104,15 @@ void apply_resize_if_needed() {
     render_game_screen(g_last_player);
 }
 
-std::optional<std::pair<int, int>> screen_to_cell(int y, int x) {
+ClickOutcome screen_to_cell(int y, int x) {
     int local_y = y - MARGIN_TOP;
     int local_x = x - MARGIN_LEFT;
 
     // Reject clicks entirely outside the board's bounding rectangle.
-    if (local_y < ROW_TOP || local_y > ROW_BOTTOM) return std::nullopt;
-    if (local_x < 0) return std::nullopt;
     int box_right = CELL_SLOT_START_X + BOARD_SIZE * CELL_STRIDE_X;
-    if (local_x > box_right) return std::nullopt;
+    if (local_y < ROW_TOP || local_y > ROW_BOTTOM || local_x < 0 || local_x > box_right) {
+        return {ClickResult::Outside, 0, 0};
+    }
 
     // Rows: clamp clicks on the outer border/header (above row 0 or below row 7) to the
     // nearest edge row, so the whole box is clickable. Between two interior data rows,
@@ -124,7 +126,7 @@ std::optional<std::pair<int, int>> screen_to_cell(int y, int x) {
         row = BOARD_SIZE - 1;
     } else {
         int rel = local_y - CELL_ORIGIN_Y;
-        if (rel % CELL_STRIDE_Y != 0) return std::nullopt;
+        if (rel % CELL_STRIDE_Y != 0) return {ClickResult::Ambiguous, 0, 0};
         row = rel / CELL_STRIDE_Y;
     }
 
@@ -139,11 +141,11 @@ std::optional<std::pair<int, int>> screen_to_cell(int y, int x) {
     } else {
         int rel = local_x - CELL_SLOT_START_X;
         int within = rel % CELL_STRIDE_X;
-        if (within == CELL_STRIDE_X - 1) return std::nullopt;
+        if (within == CELL_STRIDE_X - 1) return {ClickResult::Ambiguous, 0, 0};
         col = rel / CELL_STRIDE_X;
     }
 
-    return std::make_pair(row, col);
+    return {ClickResult::Cell, row, col};
 }
 
 void draw_board(char current_player, bool show_hints = true) {
@@ -456,9 +458,12 @@ std::pair<int, int> get_user_input() {
         if (ch == KEY_MOUSE) {
             MEVENT ev;
             if (getmouse(&ev) == OK && (ev.bstate & BUTTON1_PRESSED)) {
-                auto cell = screen_to_cell(ev.y, ev.x);
-                if (cell) return *cell;
-                render_status_message("Click landed between cells - try again.");
+                auto outcome = screen_to_cell(ev.y, ev.x);
+                if (outcome.result == ClickResult::Cell) return {outcome.row, outcome.col};
+                if (outcome.result == ClickResult::Outside)
+                    render_status_message("Click landed outside the board - click a cell.");
+                else
+                    render_status_message("Click landed between cells - try again.");
             }
             continue;
         }
