@@ -76,7 +76,7 @@ The AI then plays out the game from the given position.
 
 The AI can consult a book of known opening moves instead of searching from scratch, and the game can show you the name of the opening you're currently in (e.g. "Tiger") — both features are driven by the same file: **`openings.txt`**.
 
-`openings.txt` is a plain, human-editable list of named Othello openings — Tiger, Rose, Cow, and 68 others — each with its move sequence, curated from real Othello theory (Robert Gatliff's 1995 opening catalogue). One line per opening:
+`openings.txt` is a plain, human-editable list of 76 named Othello openings — Tiger, Rose, Cow, and 73 others — each with its move sequence, curated from real Othello theory (mainly Robert Gatliff's 1995 opening catalogue, plus a handful of independently-corroborated additions). One line per opening:
 
 ```
 Tiger|f5 d6 c3 d3 c4

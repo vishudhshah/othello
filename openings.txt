@@ -3,19 +3,46 @@
 # program start (see openings.cpp) — edit this file directly to add,
 # correct, or extend openings; nothing needs recompiling or regenerating.
 #
-# Source: Robert Gatliff's opening catalogue (July 1995), fetched directly
-# from https://www.othello.nl/content/anim/openings.txt, cross-checked
-# against https://reversiboardgame.com/openings/ (which digitizes the same
-# catalogue). Only one symmetric variant of each opening is kept here (e.g.
-# just the f5-branch) since the game canonicalizes positions across all 8
-# board symmetries at load time — the other 3 equivalent first moves (c4,
-# d3, e6) and any mirror-image continuation resolve to the same entry
-# automatically.
+# Sources:
+#   - Robert Gatliff's opening catalogue (July 1995), fetched directly from
+#     https://www.othello.nl/content/anim/openings.txt, cross-checked
+#     against https://reversiboardgame.com/openings/ and
+#     https://www.ultraboardgames.com/othello/opening-moves.php (both
+#     digitize the same catalogue) — the bulk of this file.
+#   - A handful of additional openings independently corroborated by
+#     https://samsoft.org.uk/reversi/openings.htm (a separate compilation
+#     that isn't just a re-digitization of Gatliff's list): Aubrey
+#     (Feldborg Continuation), Central Rose-Bill, F.A.T. Draw, Lysons,
+#     Rocket. (samsoft's "Bent Ganglion" was checked and turned out to be
+#     the exact same board position as Gatliff's "Ganglion" — the two
+#     sources just use different names for it — so it was left out rather
+#     than added as a confusing duplicate; "Ganglion" below is the name
+#     that wins since it's the better-corroborated one.)
+#   - Deliberately NOT included: the ~500-name extended catalogue at
+#     berg.earthlingz.de/ocd (data/openings1/openings.txt) — checked, but
+#     its names beyond Gatliff's ~71 (e.g. "Central Tiger", "Triangle",
+#     "Warsaw Triangle", "Caspard", "Ladybird") don't show up on samsoft.org.uk
+#     or any other independent source checked, i.e. they're only findable in
+#     that one compilation. Per the project's own policy of only including
+#     well-corroborated, popular openings (not everything a single source
+#     happens to list), those were left out.
+#   - The "Parallel" family genuinely only has one named line (just "f5
+#     f4") across every source checked, including the ~500-name catalogue —
+#     not a gap in this file, Parallel really is that thin in the
+#     literature (it's considered White's weakest response and was never
+#     studied as deeply as Diagonal/Perpendicular).
+#
+# Only one symmetric variant of each opening is kept here (starting move
+# may be c4, d3, e6, or f5 depending on which the source used) since the
+# game canonicalizes positions across all 8 board symmetries at load time —
+# the other 3 equivalent first moves and any mirror-image continuation
+# resolve to the same entry automatically.
 #
 # Blank lines and lines starting with # are ignored.
 
 Aircraft|f5 f6 e6 d6 c5 e3 d3 g5 d7
 Aubrey|f5 d6 c3 d3 c4 b3
+Aubrey (Feldborg Continuation)|c4 e3 f6 e6 f5 g6 e7 c5
 Bat (Kling Alternative)|f5 f6 e6 d6 c5 e3 e7 f4 f7
 Bat (Kling Continuation)|f5 f6 e6 d6 c5 e3 e7 c6 d7 f7 c7 f4 g6 e8 d8 c8 g5
 Bat (Piau Continuation 2)|f5 f6 e6 d6 c5 e3 e7 c7 d7 c6 f7
@@ -26,10 +53,12 @@ Brightwell|f5 d6 c3 d3 c4 f4 e3
 Buffalo|f5 f6 e6 d6 c3
 COMP'OTH|f5 d6 c3 d3 c4 f4 f6 f3
 Cat|f5 d6 c4 d3 c5
+Central Rose-Bill|c4 e3 f6 e6 f5 c5 f4 g6 f7 g5
 Chimney|f5 f6 e6 d6 c5 f4
 Cow|f5 f6 e6 d6 c5
 Cow Bat|f5 f6 e6 d6 c5 e3 e7
 Diagonal Opening|f5 f6
+F.A.T. Draw|c4 e3 f6 e6 f5 c5 c3 c6 d3 d2 e2 b3 c1 c2 b4 a3 a5 b5 a6 a4 a2
 Flat|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4
 Ganglion|f5 d6 c3 g5
 Greenberg|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 e7
@@ -48,6 +77,7 @@ Kung|f5 d6 c3 d3 c4 f4 f6 b4
 Landau|f5 f6 e6 d6 c5 e3 d3 c4 c3
 Leader's Tiger|f5 d6 c3 d3 c4 f4 e6
 Lollipop|f5 f6 e6 d6 c7 f4
+Lysons|c4 c3 d3 c5 b3 f3
 Mainline Tiger|f5 d6 c3 d3 c4 f4 c5 b4 b5 c6 f3 e6 e3 g6 f6 g5 d7 g3
 Maruoka|f5 f6 e6 d6 c5 e3 d3 c4 c6 b5
 Maruoka Buffalo|f5 f6 e6 d6 c3 g4 c6
@@ -64,6 +94,7 @@ Perpendicular Opening|f5 d6
 Pyramid|f5 f6 e6 d6 f7 e3 d7 e7 c6 c5 d3
 Raccoon Dog|f5 f6 e6 d6 d7
 Ralle|f5 d6 c5 f4 e3 c6 d3 f3
+Rocket|c4 c3 d3 c5 b6
 Rose|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7
 Rose-BILL|f5 d6 c3 d3 c4 f4 c5 b3 c2
 Rose-Birth|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g3 c4
