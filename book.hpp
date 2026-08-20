@@ -51,10 +51,12 @@ void book_finalize();
 
 // Used by openings_load() to avoid adding a duplicate record when two lines
 // share a prefix and agree on the move there: linear-scans the (possibly
-// still-unsorted, mid-population) book for an existing record at this
-// position, mapping its move back to the query's actual orientation.
-// Returns false if no record exists yet for this position. When one does
-// exist but specifies a *different* move, that's not a conflict — it's a
-// second legitimate alternative from real opening theory, and the caller
-// adds it as its own record (book_probe already picks among alternatives).
-bool book_find_move(uint64_t black_bb, uint64_t white_bb, char player, std::pair<int, int>& out_move);
+// still-unsorted, mid-population) book for ALL existing records at this
+// position, returning true if (row, col) is already recorded as one of
+// them. Checking against every record (not just the first found) matters —
+// many named lines can share a prefix and all want the same move there
+// (e.g. an entire opening "family"), and each one must recognize the move
+// is already covered, not just the first duplicate. Getting this wrong
+// silently skews book_probe's random pick toward whichever move happens to
+// have the most named lines behind it.
+bool book_has_move(uint64_t black_bb, uint64_t white_bb, char player, int row, int col);

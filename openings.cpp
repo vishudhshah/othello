@@ -133,9 +133,7 @@ bool openings_load(const std::string& path) {
             // supports). Only skip adding when this exact move is already
             // recorded for this position, to avoid pure duplicate records
             // when many lines share a long common prefix.
-            std::pair<int, int> existing;
-            if (!book_find_move(black_bb, white_bb, player, existing) ||
-                existing.first != row || existing.second != col) {
+            if (!book_has_move(black_bb, white_bb, player, row, col)) {
                 book_add(black_bb, white_bb, player, row, col, 0);
             }
 
