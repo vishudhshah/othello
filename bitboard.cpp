@@ -103,3 +103,15 @@ int bb_inverse_transform(int t) {
     static const int inv[8] = {0, 3, 2, 1, 4, 5, 6, 7};
     return inv[t];
 }
+
+Canonical bb_canonicalize(uint64_t black_bb, uint64_t white_bb) {
+    Canonical best{black_bb, white_bb, 0};
+    for (int t = 1; t < 8; t++) {
+        uint64_t tb = bb_apply_transform(black_bb, t);
+        uint64_t tw = bb_apply_transform(white_bb, t);
+        if (tb < best.black || (tb == best.black && tw < best.white)) {
+            best = {tb, tw, t};
+        }
+    }
+    return best;
+}

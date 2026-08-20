@@ -7,7 +7,10 @@ void ui_init();
 void ui_teardown();
 
 // Rendering
-void render_game_screen(char current_player, const std::string& status_line = "");
+// opening_name: current game's matched opening (e.g. "Tiger"), or empty if
+// none has matched yet. Drawn as part of this same redraw cycle (not a
+// standalone repaint) so it survives render_game_screen's own erase().
+void render_game_screen(char current_player, const std::string& status_line = "", const std::string& opening_name = "");
 void render_status_message(const std::string& msg);
 // Returns true if the player chose to start a new game, false to exit.
 bool render_winning_screen(char resigned_by = '\0');

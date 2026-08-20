@@ -8,6 +8,7 @@
 #include "zobrist.hpp"
 #include "tt.hpp"
 #include "book.hpp"
+#include "openings.hpp"
 #include <format>
 #include <limits>
 #include <vector>
@@ -98,54 +99,6 @@ static pair<int, int> search_fixed_depth(char player, int depth, int& out_score)
     return best_move;
 }
 
-// Offline opening-book generator (--gen-book), driven from the current
-// position (normally the initial one) out to ply_remaining plies. At each
-// distinct position (deduplicated across the whole traversal via
-// book_visited_mark's 8-fold symmetry canonicalization, so transpositions —
-// by move order or by rotation/reflection — are only searched once), runs a
-// full-width fixed-depth search over every legal move and records every
-// move within `epsilon` of the best score. Recurses into all of those
-// near-optimal moves (not just the single best), so with epsilon > 0 the
-// generated tree branches to cover studied alternatives, not just one line.
-// A pass (no legal moves) isn't itself a book entry — nothing to play — so
-// it just recurses into the opponent at the same position/ply without
-// consuming depth, matching negascout's own pass convention.
-static void generate_book_recursive(int ply_remaining, int search_depth, char player, int epsilon) {
-    if (ply_remaining <= 0 || is_game_over()) return;
-    if (book_visited_mark(black_bb, white_bb, player)) return;
-
-    vector<pair<int, int>> moves = get_sorted_moves(player);
-    if (moves.empty()) {
-        generate_book_recursive(ply_remaining, search_depth, get_opponent(player), epsilon);
-        return;
-    }
-
-    char opponent = get_opponent(player);
-    vector<pair<pair<int, int>, int>> scored;
-    scored.reserve(moves.size());
-    for (auto& mv : moves) {
-        MoveUndo undo = make_move_undoable(mv.first, mv.second, player);
-        int score = -negascout(search_depth - 1, numeric_limits<int>::min() + 1, numeric_limits<int>::max(), opponent);
-        unmake_move(undo);
-        scored.push_back({mv, score});
-    }
-    int best_score = numeric_limits<int>::min();
-    for (auto& s : scored) best_score = max(best_score, s.second);
-
-    for (auto& s : scored) {
-        if (s.second >= best_score - epsilon) {
-            book_add(black_bb, white_bb, player, s.first.first, s.first.second, s.second);
-        }
-    }
-    for (auto& s : scored) {
-        if (s.second >= best_score - epsilon) {
-            MoveUndo undo = make_move_undoable(s.first.first, s.first.second, player);
-            generate_book_recursive(ply_remaining - 1, search_depth, opponent, epsilon);
-            unmake_move(undo);
-        }
-    }
-}
-
 // Returns 0/1 (a real exit code) if argv requested a headless mode and it ran;
 // returns -1 if no headless flag was present, meaning the normal TUI should start.
 static int run_headless(int argc, char** argv) {
@@ -158,30 +111,13 @@ static int run_headless(int argc, char** argv) {
     };
 
     if (has_flag("--book-dump")) {
-        string path = get_val("--book-dump", "book.dat");
-        if (!book_load(path)) {
+        string path = get_val("--book-dump", "openings.txt");
+        if (!openings_load(path)) {
             printf("ERROR failed to load %s\n", path.c_str());
             return 1;
         }
+        printf("Loaded %zu book records from %s\n", book_size(), path.c_str());
         book_dump_all();
-        return 0;
-    }
-
-    if (has_flag("--gen-book")) {
-        int ply = stoi(get_val("--ply", "6"));
-        int search_depth = stoi(get_val("--search-depth", "8"));
-        int epsilon = stoi(get_val("--epsilon", "0"));
-        string out_path = get_val("--out", "book.dat");
-        initialize_board();
-        book_clear();
-        book_clear_visited();
-        generate_book_recursive(ply, search_depth, PLAYER1, epsilon);
-        book_finalize();
-        if (!book_save(out_path)) {
-            printf("ERROR failed to write %s\n", out_path.c_str());
-            return 1;
-        }
-        printf("BOOK generated: %zu records -> %s\n", book_size(), out_path.c_str());
         return 0;
     }
 
@@ -213,10 +149,15 @@ static int run_headless(int argc, char** argv) {
             int score, out_depth;
             pair<int, int> mv = predict_move(current_player, time_limit, score, out_depth);
             make_move(mv.first, mv.second, current_player);
-            printf("MOVE %d %c %c%d SCORE %d DEPTH %d NODES %llu\n",
+            char next_player = get_opponent(current_player);
+            string opening_name;
+            bool has_name = opening_name_probe(black_bb, white_bb, next_player, opening_name);
+            printf("MOVE %d %c %c%d SCORE %d DEPTH %d NODES %llu%s%s\n",
                 move_number, current_player, (char)('A' + mv.second), mv.first + 1,
-                score, out_depth, (unsigned long long)node_count);
-            current_player = get_opponent(current_player);
+                score, out_depth, (unsigned long long)node_count,
+                has_name ? " OPENING " : "", has_name ? opening_name.c_str() : "");
+            fflush(stdout);
+            current_player = next_player;
         }
         auto [b_score, w_score] = calculate_scores();
         printf("RESULT BLACK %d WHITE %d\n", b_score, w_score);
@@ -259,7 +200,7 @@ static int run_headless(int argc, char** argv) {
 int main(int argc, char** argv) {
     init_zobrist_table();
     tt_clear();
-    book_load("book.dat"); // silently proceeds with no book if the file doesn't exist
+    openings_load("openings.txt"); // silently proceeds with no book/names if the file doesn't exist
 
     int headless_result = run_headless(argc, argv);
     if (headless_result >= 0) return headless_result;
@@ -268,7 +209,7 @@ int main(int argc, char** argv) {
     struct UiGuard { ~UiGuard() { ui_teardown(); } } ui_guard;
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { uint64_t black_bb, white_bb, hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; };
+    struct Snapshot { uint64_t black_bb, white_bb, hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; string opening_name; };
 
     // Outer loop: each iteration is one full game, from mode selection to game over.
     // play_again controls whether we loop back for a new game or exit after the inner loop.
@@ -315,7 +256,12 @@ int main(int argc, char** argv) {
         // Initialize the move number
         int move_number = 0;
 
-        render_game_screen(current_player, format("{}'s turn.", player_name(current_player)));
+        // Sticky: once a curated opening matches, keep showing it (never
+        // clear back to blank) until a deeper/different match replaces it —
+        // matches how these labels behave in other Othello apps.
+        string current_opening_name;
+
+        render_game_screen(current_player, format("{}'s turn.", player_name(current_player)), current_opening_name);
 
         vector<Snapshot> history;
 
@@ -345,7 +291,7 @@ int main(int argc, char** argv) {
 
             // Count the move number
             move_number++;
-            render_game_screen(current_player, format("Move {} - {}'s turn.", move_number, player_name(current_player)));
+            render_game_screen(current_player, format("Move {} - {}'s turn.", move_number, player_name(current_player)), current_opening_name);
 
             // Handle different game modes
             int move_ai_score = numeric_limits<int>::min();
@@ -388,6 +334,7 @@ int main(int argc, char** argv) {
                             white_bb = restored.white_bb;
                             current_hash = restored.hash;
                             current_player = restored.player;
+                            current_opening_name = restored.opening_name;
                             move_number = restored.move_num - 1; // -1 so loop's ++ restores correct number
                             if (!history.empty()) {
                                 const auto& prev = history.back();
@@ -435,7 +382,7 @@ int main(int argc, char** argv) {
 
             // Save board state to history before making the move
             string move_str = {(char)('A' + col), (char)('1' + row)};
-            history.push_back({black_bb, white_bb, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth});
+            history.push_back({black_bb, white_bb, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth, current_opening_name});
 
             // Make the move
             last_move = {row, col};
@@ -443,6 +390,12 @@ int main(int argc, char** argv) {
 
             // Switch to the other player after the turn is complete
             switch_player(current_player);
+
+            // Sticky opening-name display: only overwrite on an actual match.
+            string matched_opening;
+            if (opening_name_probe(black_bb, white_bb, current_player, matched_opening)) {
+                current_opening_name = matched_opening;
+            }
         }
     }
 

@@ -40,7 +40,8 @@ constexpr int ROW_TOP = ROW_HEADER + 1;
 constexpr int CELL_ORIGIN_Y = ROW_TOP + 1;
 constexpr int ROW_BOTTOM = ROW_TOP + 1 + BOARD_SIZE * 2 - 1;
 constexpr int ROW_SCORE = ROW_BOTTOM + 2;   // blank line, then score, below the board
-constexpr int ROW_MESSAGE = ROW_SCORE + 1;
+constexpr int ROW_OPENING = ROW_SCORE + 1;  // current opening name, if matched (e.g. "Tiger")
+constexpr int ROW_MESSAGE = ROW_OPENING + 1;
 constexpr int ROW_LEGEND = ROW_MESSAGE + 1;
 constexpr int ROW_LOG_HEADER = ROW_LEGEND + 2; // blank line, then header
 constexpr int ROW_LOG_START = ROW_LOG_HEADER + 1;
@@ -58,6 +59,7 @@ constexpr int PAIR_MENU_SELECTED = 4;
 bool g_colors_on = false;
 bool g_unicode = false;
 char g_last_player = PLAYER1;
+std::string g_last_opening_name;
 
 enum class ClickResult { Cell, Outside, Ambiguous };
 struct ClickOutcome { ClickResult result; int row; int col; };
@@ -103,7 +105,7 @@ void apply_resize_if_needed() {
     endwin();
     refresh();
     clear();
-    render_game_screen(g_last_player);
+    render_game_screen(g_last_player, "", g_last_opening_name);
 }
 
 ClickOutcome screen_to_cell(int y, int x) {
@@ -201,7 +203,7 @@ void draw_board(char current_player, bool show_hints = true) {
     mvaddstr(AY(ROW_BOTTOM), AX(0), bottom_line);
 }
 
-void draw_chrome(char current_player, const std::string& status_line) {
+void draw_chrome(char current_player, const std::string& status_line, const std::string& opening_name) {
     move(AY(ROW_STATUS), AX(0)); clrtoeol();
     mvaddstr(AY(ROW_STATUS), AX(0), status_line.empty()
         ? std::format("{}'s turn.", player_name(current_player)).c_str()
@@ -210,6 +212,9 @@ void draw_chrome(char current_player, const std::string& status_line) {
     auto [b_score, w_score] = calculate_scores();
     move(AY(ROW_SCORE), AX(0)); clrtoeol();
     mvprintw(AY(ROW_SCORE), AX(0), "%s: %d, %s: %d", player_name(PLAYER1).c_str(), b_score, player_name(PLAYER2).c_str(), w_score);
+
+    move(AY(ROW_OPENING), AX(0)); clrtoeol();
+    if (!opening_name.empty()) mvaddstr(AY(ROW_OPENING), AX(0), opening_name.c_str());
 
     move(AY(ROW_MESSAGE), AX(0)); clrtoeol();
 
@@ -376,13 +381,14 @@ void discard_pending_input() {
     flushinp();
 }
 
-void render_game_screen(char current_player, const std::string& status_line) {
+void render_game_screen(char current_player, const std::string& status_line, const std::string& opening_name) {
     g_last_player = current_player;
+    g_last_opening_name = opening_name;
     apply_resize_if_needed();
     if (terminal_too_small()) return;
     erase();
     draw_board(current_player);
-    draw_chrome(current_player, status_line);
+    draw_chrome(current_player, status_line, opening_name);
     draw_move_log();
     refresh();
 }

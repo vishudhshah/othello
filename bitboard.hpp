@@ -43,3 +43,12 @@ uint64_t bb_apply_transform(uint64_t bb, int t);
 
 // The transform that undoes `t` (t composed with its inverse is identity).
 int bb_inverse_transform(int t);
+
+// Canonicalizes (black_bb, white_bb): tries all 8 transforms and keeps the
+// one giving the lexicographically-smallest (black, white) pair, recording
+// which transform produced it (so a caller can map a move found in the
+// canonical orientation back to the original one via bb_inverse_transform).
+// Shared by book.cpp and openings.cpp — any position-keyed, symmetry-aware
+// table in this codebase should use this rather than reimplementing it.
+struct Canonical { uint64_t black, white; int transform; };
+Canonical bb_canonicalize(uint64_t black_bb, uint64_t white_bb);

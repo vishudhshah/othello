@@ -1,0 +1,87 @@
+# Named Othello openings. One opening per line: Name|space-separated moves
+# (lowercase algebraic, e.g. "f5 d6 c3 d3 c4"). Loaded fresh at every
+# program start (see openings.cpp) — edit this file directly to add,
+# correct, or extend openings; nothing needs recompiling or regenerating.
+#
+# Source: Robert Gatliff's opening catalogue (July 1995), fetched directly
+# from https://www.othello.nl/content/anim/openings.txt, cross-checked
+# against https://reversiboardgame.com/openings/ (which digitizes the same
+# catalogue). Only one symmetric variant of each opening is kept here (e.g.
+# just the f5-branch) since the game canonicalizes positions across all 8
+# board symmetries at load time — the other 3 equivalent first moves (c4,
+# d3, e6) and any mirror-image continuation resolve to the same entry
+# automatically.
+#
+# Blank lines and lines starting with # are ignored.
+
+Aircraft|f5 f6 e6 d6 c5 e3 d3 g5 d7
+Aubrey|f5 d6 c3 d3 c4 b3
+Bat (Kling Alternative)|f5 f6 e6 d6 c5 e3 e7 f4 f7
+Bat (Kling Continuation)|f5 f6 e6 d6 c5 e3 e7 c6 d7 f7 c7 f4 g6 e8 d8 c8 g5
+Bat (Piau Continuation 2)|f5 f6 e6 d6 c5 e3 e7 c7 d7 c6 f7
+Berner|f5 d6 c4 d3 c5 f4 e3 f3 c2 b4 b3
+Bhagat|f5 d6 c5 f4 e3 c6 d7
+Brightstein|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g3 c4 g5 c3 b4 e2
+Brightwell|f5 d6 c3 d3 c4 f4 e3
+Buffalo|f5 f6 e6 d6 c3
+COMP'OTH|f5 d6 c3 d3 c4 f4 f6 f3
+Cat|f5 d6 c4 d3 c5
+Chimney|f5 f6 e6 d6 c5 f4
+Cow|f5 f6 e6 d6 c5
+Cow Bat|f5 f6 e6 d6 c5 e3 e7
+Diagonal Opening|f5 f6
+Flat|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4
+Ganglion|f5 d6 c3 g5
+Greenberg|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 e7
+Hamilton|f5 f6 e6 d6 c7 c6 d7
+Heath|f5 f6 e6 d6 e7
+Heath-Bat|f5 f6 e6 d6 e7 g5 c5
+Heath-Chimney|f5 f6 e6 d6 e7 f4
+Hokuriku Buffalo|f5 f6 e6 d6 c3 d3
+Horse|f5 d6 c5 f4 d3
+IAGO|f5 d6 c5 f4 e3 c6 e6 f6
+Inoue|f5 d6 c5 f4 e3 c6 e6
+Ishii|f5 d6 c3 d3 c4 f4 c5 b4 b5 c6 f3 e6 e3
+Italian|f5 d6 c4 d3 e6
+Iwasaki variation|f5 f6 e6 d6 e7 g5 g4
+Kung|f5 d6 c3 d3 c4 f4 f6 b4
+Landau|f5 f6 e6 d6 c5 e3 d3 c4 c3
+Leader's Tiger|f5 d6 c3 d3 c4 f4 e6
+Lollipop|f5 f6 e6 d6 c7 f4
+Mainline Tiger|f5 d6 c3 d3 c4 f4 c5 b4 b5 c6 f3 e6 e3 g6 f6 g5 d7 g3
+Maruoka|f5 f6 e6 d6 c5 e3 d3 c4 c6 b5
+Maruoka Buffalo|f5 f6 e6 d6 c3 g4 c6
+Melnikov|f5 f6 e6 d6 c5 e3 e7 c7 d7 c6 d3
+Mimura|f5 d6 c5 f4 e3 d3
+Mimura variation II|f5 f6 e6 d6 e7 g5 g6 e3 c5 c6 d3 c4 b3
+Murakami Variation|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4 c4 g6
+No-Cat|f5 d6 c4 g5
+No-Cat (Continuation)|f5 d6 c4 g5 c6 c5 d7 d3 b4 c3 e3 f3
+No-Kung|f5 d6 c3 d3 c4 f4 f6 g5
+No-Kung (Continuation)|f5 d6 c3 d3 c4 f4 f6 g5 e3 f3 g4 h3 g3 f2
+Parallel Opening|f5 f4
+Perpendicular Opening|f5 d6
+Pyramid|f5 f6 e6 d6 f7 e3 d7 e7 c6 c5 d3
+Raccoon Dog|f5 f6 e6 d6 d7
+Ralle|f5 d6 c5 f4 e3 c6 d3 f3
+Rose|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7
+Rose-BILL|f5 d6 c3 d3 c4 f4 c5 b3 c2
+Rose-Birth|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g3 c4
+Rose-Tamenori-Kling|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g3 c4 b4 c3
+Rose-birdie|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g3 c4 b4
+Rose-v-Toth|f5 f6 e6 d6 c5 e3 d3
+Rotating Flat|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4 c4
+Rotating Flat (Kling Continuation)|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4 c4 g5 c3 f7 d2 e7 f2
+Sailboat|f5 f6 e6 d6 c5 e3 d3 g5 e2 b5
+Sakaguchi|f5 d6 c4 d3 c5 f4 e3 f3 c2 c6
+Semi-Wing Variation|f5 f6 c4 f4
+Shaman|f5 d6 c5 f4 e3 c6 f3
+Snake|f5 f6 e6 d6 f7
+Stephenson|f5 d6 c3 d3 c4 f4 f6
+Swallow|f5 d6 c4 g5 c6
+Tamenori|f5 d6 c3 d3 c4 f4 c5 b3 c2 e6
+Tanida|f5 f6 e6 d6 c5 e3 d3 g5
+Tanida Buffalo|f5 f6 e6 d6 c3 f4 c6 d3 e3 d2
+Tiger|f5 d6 c3 d3 c4
+Wing Variation|f5 f6 d3 f4
+X-square Opening|f5 f6 e6 d6 g7

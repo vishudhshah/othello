@@ -3,15 +3,16 @@
 #include <cstdint>
 #include <cstddef>
 #include <utility>
-#include <string>
 
 // Position-keyed, symmetry-canonicalized opening book. Keyed by the
 // lexicographically-smallest of a position's 8 symmetric orientations
-// (bitboard.hpp's transforms) plus side-to-move — not by move sequence —
-// so it catches transpositions and rotation/reflection-equivalent lines for
-// free. Generated offline (see book_generate, driven by main.cpp's
-// --gen-book) against the finished bitboard+Zobrist+TT engine, then loaded
-// once at program start and probed by predict_move() before it searches.
+// (bitboard.hpp's bb_canonicalize) plus side-to-move — not by move sequence
+// — so it catches transpositions and rotation/reflection-equivalent lines
+// for free. Populated at every program start by openings.cpp's
+// openings_load() (parsed from the curated openings.txt, not self-play —
+// see that file), then probed by predict_move() before it searches. No
+// on-disk cache: re-parsing openings.txt takes microseconds, so there's
+// nothing to save/load.
 
 struct BookRecord {
     uint64_t black = 0, white = 0; // canonical-orientation position
@@ -20,11 +21,6 @@ struct BookRecord {
     int32_t score = 0;
 };
 
-// Loads a book previously written by book_save(). Returns false (book stays
-// empty) if the file doesn't exist or fails to parse — callers should treat
-// that as "no book available," not as an error to surface to the user.
-bool book_load(const std::string& path);
-bool book_save(const std::string& path);
 bool book_loaded();
 size_t book_size();
 
@@ -34,15 +30,14 @@ void book_dump_all();
 // Probes for (black_bb, white_bb) with `player` to move. On a hit, fills
 // out_move (already mapped back to the position's actual orientation, not
 // the canonical one) and out_score, and returns true. When multiple
-// near-optimal moves were stored for this position (see book_generate's
-// epsilon), picks uniformly at random among them for variety.
+// alternatives were stored for this position, picks uniformly at random
+// among them for variety.
 bool book_probe(uint64_t black_bb, uint64_t white_bb, char player, std::pair<int, int>& out_move, int& out_score);
 
-// --- Generation-only API (used by main.cpp's --gen-book) ---
+// --- Population API (used by openings.cpp's openings_load) ---
 
-// Discards any in-memory book records (e.g. from a startup book_load) —
-// --gen-book must call this before generating, so a fresh run never
-// accumulates duplicate/stale records on top of a previously-generated file.
+// Discards any in-memory book records — openings_load() calls this before
+// (re)populating, so re-loading never accumulates duplicate/stale records.
 void book_clear();
 
 // Adds one (position, move, score) to the in-memory book, keyed by the
@@ -51,12 +46,15 @@ void book_clear();
 void book_add(uint64_t black_bb, uint64_t white_bb, char player, int row, int col, int score);
 
 // Sorts the in-memory book by key — must be called after all book_add calls
-// and before book_save (book_probe relies on the sorted order).
+// (book_probe relies on the sorted order).
 void book_finalize();
 
-// Transposition dedup for generation: canonicalizes (black_bb, white_bb,
-// player) and returns true if that canonical position was already marked
-// visited (caller should skip re-searching it), false if this call just
-// marked it visited for the first time.
-bool book_visited_mark(uint64_t black_bb, uint64_t white_bb, char player);
-void book_clear_visited();
+// Used by openings_load() to avoid adding a duplicate record when two lines
+// share a prefix and agree on the move there: linear-scans the (possibly
+// still-unsorted, mid-population) book for an existing record at this
+// position, mapping its move back to the query's actual orientation.
+// Returns false if no record exists yet for this position. When one does
+// exist but specifies a *different* move, that's not a conflict — it's a
+// second legitimate alternative from real opening theory, and the caller
+// adds it as its own record (book_probe already picks among alternatives).
+bool book_find_move(uint64_t black_bb, uint64_t white_bb, char player, std::pair<int, int>& out_move);
