@@ -121,6 +121,19 @@ static int run_headless(int argc, char** argv) {
         return 0;
     }
 
+    if (has_flag("--opening-name")) {
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+        string name;
+        if (opening_name_probe(black_bb, white_bb, player, name)) {
+            printf("OPENING %s\n", name.c_str());
+        } else {
+            printf("OPENING none\n");
+        }
+        return 0;
+    }
+
     if (has_flag("--perft")) {
         int depth = stoi(get_val("--perft", "1"));
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;

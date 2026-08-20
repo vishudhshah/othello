@@ -89,7 +89,7 @@ At every program start, the game reads this file, replays each sequence, and bui
 - It's keyed by *canonical* position — the board's 8 rotations/reflections (spin it 90°, flip it, etc.) are recognized as the same entry, so `openings.txt` only needs one orientation of each opening; the other 3 equivalent first moves and any mirror-image continuation are covered automatically.
 - Where different named openings share an early position and then diverge, the book keeps every alternative and picks one at random each time it's used — so the AI doesn't play the exact same opening every single game.
 
-You'll see book moves in the recent-moves log / CSV export as a move with **depth `-1`** — that's the "no search happened, this came straight from the book" marker. The opening name itself (once matched) is shown as its own line below the score in the TUI, and stays visible (it doesn't disappear once you leave the line — the game genuinely did start with that opening).
+You'll see book moves in the recent-moves log / CSV export as a move with **depth `-1`** — that's the "no search happened, this came straight from the book" marker. The opening name itself is shown as its own line below the score in the TUI, updating after *every* move (not just when a full named line completes) — as soon as the current position uniquely points toward exactly one remaining named opening, it's shown as e.g. "Wing Variation category"; once the position exactly matches that opening's full sequence, the "category" suffix drops and it just says "Wing Variation". If a position is still consistent with several different named openings, nothing new is shown yet — the display sticks with whatever last resolved unambiguously (it doesn't disappear once you leave a line — the game genuinely did start with that opening).
 
 The book is **only ever used from the standard starting position onward** — it's silently skipped in Puzzle Mode (a custom position essentially never coincidentally matches a book entry), and it hands off to normal search automatically once a game goes past however many moves `openings.txt` covers for that particular line.
 
@@ -115,6 +115,7 @@ Passing certain flags on the command line skips the ncurses screen entirely and 
 ./main --search --fen "8/8/8/3WB3/3BW3/8/8/8" --player B   # ...from a specific position
 ./main --perft 6                                # count reachable positions N moves out (move-generator correctness check)
 ./main --book-dump openings.txt                 # print every entry the opening book parses to (see above)
+./main --opening-name --64 "<64charboard>" --player B   # look up the opening name/category for an arbitrary position
 ```
 
 Common options across these: `--fen <string>` / `--64 <string>` load a starting position (same formats as Puzzle Mode above; defaults to the standard starting position if neither is given), `--player B|W` sets whose turn it is, `--time <seconds>` sets the AI's thinking time. A couple of flags exist purely for verifying the engine is behaving correctly and aren't needed day-to-day: `--verify-zobrist` (with `--perft`) and `--no-tt` / `--search --fixed-depth <n>` (with `--search`).

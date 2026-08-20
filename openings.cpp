@@ -11,7 +11,23 @@
 
 namespace {
 
-std::unordered_map<uint64_t, std::string> g_names;
+// For a given position, tracks every curated line that passes through it.
+// exact_name is set when the position IS some opening's own final ply (the
+// confirmed case — display the plain name). prefix_names collects every
+// opening (including the exact one, if any) whose sequence merely passes
+// through this position on the way to a later ply — when exactly one
+// remains, the position uniquely determines where the game is heading even
+// though it hasn't arrived yet, so that's displayed as "<Name> category"
+// (matching how other Othello apps label an in-progress line). When
+// several different openings still share this exact position, it's
+// genuinely ambiguous which one (if any) the game is heading toward, so
+// nothing is displayed and the caller's own sticky logic keeps showing
+// whatever last resolved unambiguously.
+struct PositionMatches {
+    std::string exact_name;
+    std::vector<std::string> prefix_names;
+};
+std::unordered_map<uint64_t, PositionMatches> g_matches;
 
 // Standard Othello starting position, computed locally — mirrors
 // board.cpp's initialize_board() but never touches the live global
@@ -54,7 +70,7 @@ bool openings_load(const std::string& path) {
     if (!in) return false;
 
     book_clear();
-    g_names.clear();
+    g_matches.clear();
 
     std::string line;
     int line_no = 0;
@@ -82,6 +98,13 @@ bool openings_load(const std::string& path) {
         initial_position(black_bb, white_bb);
         char player = PLAYER1;
         bool ok = true;
+
+        // Every position visited while replaying this line, ply 0 (before
+        // any move) through the final ply — used below to register this
+        // opening as a "still possible" match at every one of those
+        // positions, not just its endpoint.
+        std::vector<uint64_t> ply_keys;
+        ply_keys.push_back(name_key(black_bb, white_bb, player));
 
         while (iss >> tok) {
             int row, col;
@@ -122,11 +145,18 @@ bool openings_load(const std::string& path) {
             else                   { white_bb = player_bb; black_bb = opp_bb; }
 
             player = (player == PLAYER1) ? PLAYER2 : PLAYER1;
+            ply_keys.push_back(name_key(black_bb, white_bb, player));
         }
 
         if (!ok) continue;
 
-        g_names[name_key(black_bb, white_bb, player)] = name;
+        // Register this opening as a possible match at every position it
+        // passes through, and as the confirmed (exact) match at its own
+        // final position.
+        for (uint64_t key : ply_keys) {
+            g_matches[key].prefix_names.push_back(name);
+        }
+        g_matches[ply_keys.back()].exact_name = name;
         loaded++;
     }
 
@@ -135,8 +165,17 @@ bool openings_load(const std::string& path) {
 }
 
 bool opening_name_probe(uint64_t black_bb, uint64_t white_bb, char player, std::string& out_name) {
-    auto it = g_names.find(name_key(black_bb, white_bb, player));
-    if (it == g_names.end()) return false;
-    out_name = it->second;
-    return true;
+    auto it = g_matches.find(name_key(black_bb, white_bb, player));
+    if (it == g_matches.end()) return false;
+    const PositionMatches& m = it->second;
+
+    if (!m.exact_name.empty()) {
+        out_name = m.exact_name;
+        return true;
+    }
+    if (m.prefix_names.size() == 1) {
+        out_name = m.prefix_names[0] + " category";
+        return true;
+    }
+    return false;
 }
