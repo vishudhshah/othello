@@ -15,9 +15,8 @@
 #     (Feldborg Continuation), Central Rose-Bill, F.A.T. Draw, Lysons,
 #     Rocket. (samsoft's "Bent Ganglion" was checked and turned out to be
 #     the exact same board position as Gatliff's "Ganglion" — the two
-#     sources just use different names for it — so it was left out rather
-#     than added as a confusing duplicate; "Ganglion" below is the name
-#     that wins since it's the better-corroborated one.)
+#     sources just use different names for it; see the HKOA tie-break note
+#     below for which name this file actually uses.)
 #   - Deliberately NOT included: the ~500-name extended catalogue at
 #     berg.earthlingz.de/ocd (data/openings1/openings.txt) — checked, but
 #     its names beyond Gatliff's ~71 (e.g. "Central Tiger", "Triangle",
@@ -46,7 +45,12 @@
 #     HKOA's name. (Checked at the time of adding the above: none of the
 #     13 overlapping HKOA entries actually conflicted with this file's
 #     existing names — e.g. HKOA's "Snake / Peasant" and "Heath /
-#     Tobidashi" both still list this file's name, Snake/Heath, first.)
+#     Tobidashi" both still list this file's name, Snake/Heath, first.
+#     One conflict was missed at the time because it was a name-string
+#     match, not a position match: HKOA lists "Ganglion"'s exact position
+#     (f5 d6 c3 g5, moves c4e3f6b4 in HKOA's own notation) as "Bent
+#     Ganglion" — found later when an app using HKOA's naming displayed
+#     it that way. Renamed to "Bent Ganglion" per the tie-break policy.)
 #
 # Only one symmetric variant of each opening is kept here (starting move
 # may be c4, d3, e6, or f5 depending on which the source used) since the
@@ -62,6 +66,7 @@ Aubrey / Tanaka|f5 d6 c3 d3 c4 b3
 Bat (Kling Alternative)|f5 f6 e6 d6 c5 e3 e7 f4 f7
 Bat (Kling Continuation)|f5 f6 e6 d6 c5 e3 e7 c6 d7 f7 c7 f4 g6 e8 d8 c8 g5
 Bat (Piau Continuation 2)|f5 f6 e6 d6 c5 e3 e7 c7 d7 c6 f7
+Bent Ganglion|f5 d6 c3 g5
 Berner|f5 d6 c4 d3 c5 f4 e3 f3 c2 b4 b3
 Bhagat|f5 d6 c5 f4 e3 c6 d7
 Brightstein|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g3 c4 g5 c3 b4 e2
@@ -76,7 +81,6 @@ Cow Bat / Bat / Cambridge|f5 f6 e6 d6 c5 e3 e7
 Diagonal Opening|f5 f6
 F.A.T. Draw|c4 e3 f6 e6 f5 c5 c3 c6 d3 d2 e2 b3 c1 c2 b4 a3 a5 b5 a6 a4 a2
 Flat|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4
-Ganglion|f5 d6 c3 g5
 Greenberg / Dawg|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 e7
 Hamilton|f5 f6 e6 d6 c7 c6 d7
 Heath / Tobidashi "Jumping Out"|f5 f6 e6 d6 e7
