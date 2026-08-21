@@ -270,9 +270,20 @@ std::vector<std::pair<int, int>> get_sorted_moves(char player) {
         {1,1}, {1,6}, {6,1}, {6,6},
     };
 
+    // Compute the legal-move bitmask once and bit-test it 64 times, instead
+    // of calling is_valid_move() up to 64 times — each of those calls would
+    // independently recompute this same bitmask from scratch even though
+    // the board doesn't change between checks. get_sorted_moves() runs once
+    // per search node, so this redundant recomputation would otherwise
+    // happen millions of times per second during a real search.
+    uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
+    uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
+    uint64_t moves_bb = bb_get_moves(player_bb, opp_bb);
+
     std::vector<std::pair<int, int>> valid_moves;
     for (const auto& move : order) {
-        if (is_valid_move(move.first, move.second, player)) {
+        int sq = move.first * BOARD_SIZE + move.second;
+        if ((moves_bb >> sq) & 1ULL) {
             valid_moves.push_back(move);
         }
     }
