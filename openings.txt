@@ -4,58 +4,21 @@
 # correct, or extend openings; nothing needs recompiling or regenerating.
 #
 # Sources:
-#   - Robert Gatliff's opening catalogue (July 1995), fetched directly from
-#     https://www.othello.nl/content/anim/openings.txt, cross-checked
-#     against https://reversiboardgame.com/openings/ and
-#     https://www.ultraboardgames.com/othello/opening-moves.php (both
-#     digitize the same catalogue) — the bulk of this file.
-#   - A handful of additional openings independently corroborated by
-#     https://samsoft.org.uk/reversi/openings.htm (a separate compilation
-#     that isn't just a re-digitization of Gatliff's list): Aubrey
-#     (Feldborg Continuation), Central Rose-Bill, F.A.T. Draw, Lysons,
-#     Rocket. (samsoft's "Bent Ganglion" was checked and turned out to be
-#     the exact same board position as Gatliff's "Ganglion" — the two
-#     sources just use different names for it; see the HKOA tie-break note
-#     below for which name this file actually uses.)
-#   - Deliberately NOT included: the ~500-name extended catalogue at
-#     berg.earthlingz.de/ocd (data/openings1/openings.txt) — checked, but
-#     its names beyond Gatliff's ~71 (e.g. "Central Tiger", "Triangle",
-#     "Warsaw Triangle", "Caspard", "Ladybird") don't show up on samsoft.org.uk
-#     or any other independent source checked, i.e. they're only findable in
-#     that one compilation. Per the project's own policy of only including
-#     well-corroborated, popular openings (not everything a single source
-#     happens to list), those were left out.
-#   - The "Parallel" family has exactly one named line ("f5 f4" itself) in
-#     every multi-source-corroborated catalogue checked (Gatliff, the
-#     ~500-name extended catalogue) — Parallel really is that thin in the
-#     mainstream literature, not a gap in this file.
-#   - Openings from https://www.othello.hk/opening-list/ (Hong Kong
-#     Othello Association). The page's visible org-chart tree only shows
-#     a handful of nodes without JS, but it embeds two full data tables
-#     (tablepress-9/-10, inside a collapsed "read more" section) holding
-#     102 genuinely distinct named entries (105 rows minus 3 family-level
-#     "Category" grouping nodes: Cat/Rabbit/Tiger Category) — a first pass
-#     only found 4 (Mouse, Rotated Raccoon Dog, Rotated Snake, Wild
-#     Rabbit) by parsing the visible tree; a later full audit against the
-#     hidden tables found 57 more exact matches against this file's
-#     existing entries (good cross-validation), 6 near-matches that were
-#     just spelling/punctuation variants (not real conflicts — e.g. HKOA's
-#     unpunctuated "F.A.T Draw" vs this file's "F.A.T. Draw"), 2 genuine
-#     naming conflicts, 1 named intermediate waypoint not otherwise in
-#     this file, and 36 fully new openings not found in any other source
-#     checked — all added below on the same basis as the original 4: an
-#     official national association's catalogue is reasonable authority
-#     even standing alone. Not a precedent for silently relaxing the bar
-#     elsewhere; each addition here was still checked individually.
-#   - HKOA (https://www.othello.hk/opening-list/) is treated as the
-#     tie-breaking source of truth for naming: if a position already in
-#     this file is ever found under a conflicting name on HKOA's page, use
-#     HKOA's name. Two real conflicts found (beyond the punctuation-only
-#     near-matches above, which needed no change): Gatliff's "Ganglion"
-#     (f5 d6 c3 g5) is HKOA's "Bent Ganglion"; Gatliff's "Flat" (f5 d6 c5
-#     f4 e3 c6 d3 f6 e6 d7 g4) is HKOA's "Flat Rose"; and this file's
-#     "Rotating Flat (Kling Continuation)" is HKOA's "Rotating Flat
-#     (Kling)". All three renamed below to HKOA's name.
+#   - Robert Gatliff's opening catalogue (July 1995), othello.nl/content/anim/openings.txt
+#     — the bulk of this file. Cross-checked against reversiboardgame.com/openings
+#     and ultraboardgames.com/othello/opening-moves.php (both re-digitize the same catalogue).
+#   - samsoft.org.uk/reversi/openings.htm — a handful of independently-corroborated
+#     additions (Aubrey (Feldborg Continuation), Central Rose-Bill, F.A.T. Draw,
+#     Lysons, Rocket).
+#   - othello.hk/opening-list (Hong Kong Othello Association) — most of the rest of
+#     this file. Treated as the tie-breaking source of truth for naming: if a
+#     position here is ever found under a conflicting name on HKOA's page, rename
+#     to HKOA's name.
+#   - Deliberately excluded: the ~500-name extended catalogue at berg.earthlingz.de/ocd
+#     — most of its names beyond Gatliff's don't show up on any other source, so per
+#     this file's well-corroborated-only policy they're left out. The one exception
+#     is HKOA, whose national-association catalogue is treated as reasonable
+#     authority standing alone.
 #
 # Only one symmetric variant of each opening is kept here (starting move
 # may be c4, d3, e6, or f5 depending on which the source used) since the
