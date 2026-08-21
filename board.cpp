@@ -156,7 +156,7 @@ std::pair<int, int> calculate_scores() {
     return std::make_pair(__builtin_popcountll(black_bb), __builtin_popcountll(white_bb));
 }
 
-void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
+void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, const std::vector<std::string>& openings, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
     // Build timestamped base filename inside logs/ folder
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
@@ -219,11 +219,11 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, const s
     std::string time_limit_b_str = (game_mode == 2 && player_color == PLAYER1) ? "" : std::to_string(time_limit_b);
     std::string time_limit_w_str = (game_mode == 2 && player_color == PLAYER2) ? "" : std::to_string(time_limit_w);
     std::ofstream csv(base + ".csv");
-    csv << "move_number,score,depth,date,game_mode,player_color,time_limit_b,time_limit_w\n";
+    csv << "move_number,score,depth,opening,date,game_mode,player_color,time_limit_b,time_limit_w\n";
     for (int i = 0; i < (int)moves.size(); i++) {
         if (ai_scores[i] != std::numeric_limits<int>::min())
-            csv << std::format("{},{},{},{},{},{},{},{}\n", i + 1, ai_scores[i], ai_depths[i],
-                date_str, mode_str, player_color_str, time_limit_b_str, time_limit_w_str);
+            csv << std::format("{},{},{},{},{},{},{},{},{}\n", i + 1, ai_scores[i], ai_depths[i],
+                openings[i], date_str, mode_str, player_color_str, time_limit_b_str, time_limit_w_str);
     }
     csv.close();
 

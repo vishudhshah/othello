@@ -277,6 +277,11 @@ int main(int argc, char** argv) {
         render_game_screen(current_player, format("{}'s turn.", player_name(current_player)), current_opening_name);
 
         vector<Snapshot> history;
+        // Parallel to history: the opening name as it stood right after each
+        // move was made (Snapshot::opening_name is the *pre*-move value, used
+        // for undo — this is the post-move value actually shown to the
+        // player, which is what the CSV export should record).
+        vector<string> move_openings;
 
         // Game loop
         for (;;) {
@@ -288,7 +293,7 @@ int main(int argc, char** argv) {
                 vector<int> ai_depths;
                 for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
                 char pc = (game_mode == 2) ? player_color : '\0';
-                export_game(moves, ai_scores, ai_depths, game_mode, pc, time_limit_b, time_limit_w, start_pos);
+                export_game(moves, ai_scores, ai_depths, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos);
 
                 // Show the final result and let the player choose to start a new game or exit
                 play_again = render_winning_screen();
@@ -325,7 +330,7 @@ int main(int argc, char** argv) {
                         vector<int> ai_depths;
                         for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
                         char pc = (game_mode == 2) ? player_color : '\0';
-                        export_game(moves, ai_scores, ai_depths, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
+                        export_game(moves, ai_scores, ai_depths, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
                         play_again = render_winning_screen(current_player);
                         did_resign = true;
                         break;
@@ -337,10 +342,12 @@ int main(int argc, char** argv) {
                             // In PvE, pop until we find the player's own snapshot (handles skipped turns)
                             Snapshot restored = history.back();
                             history.pop_back();
+                            move_openings.pop_back();
                             if (game_mode == 2) {
                                 while (!history.empty() && restored.player != player_color) {
                                     restored = history.back();
                                     history.pop_back();
+                                    move_openings.pop_back();
                                 }
                             }
                             black_bb = restored.black_bb;
@@ -409,6 +416,7 @@ int main(int argc, char** argv) {
             if (opening_name_probe(black_bb, white_bb, current_player, matched_opening)) {
                 current_opening_name = matched_opening;
             }
+            move_openings.push_back(current_opening_name);
         }
     }
 
