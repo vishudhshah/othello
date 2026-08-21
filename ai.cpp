@@ -9,6 +9,46 @@
 
 uint64_t node_count = 0;
 
+// Killer-move and history-heuristic move ordering. Neither changes the
+// search's result (negascout still explores the same set of moves, alpha-
+// beta pruning is still exact) — they only change what order sibling moves
+// are tried in, which is the single biggest lever for cutoff rate beyond
+// the TT-move hint. Both are reset at the start of every predict_move()
+// call: they capture "what's been working well in *this* search," and
+// carrying that across drastically different future positions (later in
+// the game) could mislead ordering rather than help it — same reasoning
+// that keeps the TT warm across a whole game (it's keyed by exact
+// position, so staleness is harmless) while these aren't.
+//
+// Killers: up to 2 moves per remaining search depth that most recently
+// caused a beta cutoff at that depth (classic 2-slot killer table, indexed
+// by remaining depth rather than ply-from-root — the simpler, still
+// effective convention).
+constexpr int MAX_KILLER_DEPTH = 64;
+static std::pair<int, int> g_killers[MAX_KILLER_DEPTH][2];
+
+// History: score per (player, destination square), incremented on a beta
+// cutoff weighted by depth*depth (deeper cutoffs are stronger signals).
+static int g_history[2][BOARD_SIZE * BOARD_SIZE];
+
+static void reset_move_ordering_heuristics() {
+    for (auto& slot : g_killers) slot[0] = slot[1] = {-1, -1};
+    for (auto& row : g_history) for (int& v : row) v = 0;
+}
+
+static void record_cutoff(char player, int depth, int row, int col) {
+    int player_idx = (player == PLAYER1) ? 0 : 1;
+    g_history[player_idx][row * BOARD_SIZE + col] += depth * depth;
+
+    if (depth >= 0 && depth < MAX_KILLER_DEPTH) {
+        std::pair<int, int> mv = {row, col};
+        if (g_killers[depth][0] != mv) {
+            g_killers[depth][1] = g_killers[depth][0];
+            g_killers[depth][0] = mv;
+        }
+    }
+}
+
 int game_phase() {
     int total_discs = __builtin_popcountll(black_bb | white_bb);
 
@@ -319,6 +359,33 @@ int negascout(int depth, int alpha, int beta, char player) {
         }
     }
 
+    // Next, this depth's killer moves (if legal here and not already the
+    // TT move) — moves that recently refuted a sibling node are a good bet
+    // to refute this one too.
+    int ordered_upto = (tt_move.first >= 0) ? 1 : 0;
+    if (depth >= 0 && depth < MAX_KILLER_DEPTH) {
+        for (auto& killer : g_killers[depth]) {
+            if (killer.first < 0 || killer == tt_move) continue;
+            auto it = std::find(sorted_moves.begin() + ordered_upto, sorted_moves.end(), killer);
+            if (it != sorted_moves.end()) {
+                std::iter_swap(sorted_moves.begin() + ordered_upto, it);
+                ordered_upto++;
+            }
+        }
+    }
+
+    // Everything else: stable-sort by history-heuristic score (descending),
+    // falling back to the existing static square-priority order for ties —
+    // a smoother, whole-list-covering signal beyond just the top 2 killers.
+    if (ordered_upto < (int)sorted_moves.size()) {
+        int player_idx = (player == PLAYER1) ? 0 : 1;
+        std::stable_sort(sorted_moves.begin() + ordered_upto, sorted_moves.end(),
+            [player_idx](const std::pair<int, int>& a, const std::pair<int, int>& b) {
+                return g_history[player_idx][a.first * BOARD_SIZE + a.second]
+                     > g_history[player_idx][b.first * BOARD_SIZE + b.second];
+            });
+    }
+
     std::pair<int, int> best_move_found = sorted_moves[0];
 
     // Iterate through all sorted (valid) moves
@@ -351,6 +418,7 @@ int negascout(int depth, int alpha, int beta, char player) {
 
         // Perform alpha-beta pruning
         if (alpha >= beta) {
+            record_cutoff(player, depth, i, j);
             break;
         }
     }
@@ -365,6 +433,7 @@ int negascout(int depth, int alpha, int beta, char player) {
 
 std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
     node_count = 0;
+    reset_move_ordering_heuristics();
 
     // Opening book probe. Keyed by canonical (symmetry-normalized) position,
     // so this also naturally never fires on an arbitrary puzzle-mode start

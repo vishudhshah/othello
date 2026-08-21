@@ -21,7 +21,7 @@ struct TTEntry {
 // and unbounded memory growth — standard practice for a search TT. The full
 // 64-bit key is stored in each slot so a same-slot, different-position
 // collision is detected rather than silently returning a wrong result.
-constexpr size_t TT_INDEX_BITS = 20; // 2^20 entries, ~24MB at sizeof(TTEntry)
+constexpr size_t TT_INDEX_BITS = 22; // 2^22 entries, ~100MB at sizeof(TTEntry)
 constexpr size_t TT_SIZE = size_t(1) << TT_INDEX_BITS;
 constexpr size_t TT_MASK = TT_SIZE - 1;
 
