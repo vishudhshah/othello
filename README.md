@@ -31,12 +31,12 @@ Othello/Reversi game coded in C++, with an ncurses TUI. Can play against an 'AI'
 - In PvE mode the player can choose their disk color and consequently, who starts first.
 - **Undo** (`U`) — reverts your last move. In PvE mode, undoes back to the player's own last turn, skipping over the AI's move.
 - **Resign** (`R`) — immediately concedes the game and awards the win to the opponent.
-- **Recent-moves log** — a persistent panel below the board keeps the last 10 moves/skips visible (including the AI's search score and depth reached for each of its moves), so fast AI-vs-AI play or turn-skips stay legible instead of flashing past.
+- **Recent-moves log** — a persistent panel below the board keeps the last 10 moves/skips visible (including the AI's search score, depth reached, and nodes searched for each of its moves), so fast AI-vs-AI play or turn-skips stay legible instead of flashing past.
 - **Game-over screen** shows the final board position alongside the result, and waits for a keypress before exiting.
 - **Game log export** — at the end of every game, three files are saved to the `logs/` folder:
   - `.log` — raw move sequence on a single line
   - `.txt` — human-readable log with move history, scores, result, and game settings
-  - `.csv` — one row per AI move (`move_number,score,depth,opening,date,game_mode,player_color,time_limit_b,time_limit_w`), for graphing or long-term analysis. `opening` is whatever was showing in the opening-name display right after that move (blank if none had matched yet)
+  - `.csv` — one row per AI move (`move_number,score,depth,nodes,opening,date,game_mode,player_color,time_limit_b,time_limit_w`), for graphing or long-term analysis. `nodes` is the number of search-tree nodes visited for that move (0 for book moves, since they don't search). `opening` is whatever was showing in the opening-name display right after that move (blank if none had matched yet)
 - **Optional score/depth chart** — set `OTHELLO_GRAPH=1` to also generate a `.png` chart of AI score and search depth per move (via `plot_game.py`, requires `python3` + `matplotlib`). Off by default; the game runs with zero extra dependencies otherwise.
 - **Live opening name** — when the game is following a known line from real Othello opening theory, its name (e.g. "Tiger") is shown below the score. See [Opening book](#opening-book) below.
 

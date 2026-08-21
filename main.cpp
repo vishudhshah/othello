@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
     struct UiGuard { ~UiGuard() { ui_teardown(); } } ui_guard;
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { uint64_t black_bb, white_bb, hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; string opening_name; };
+    struct Snapshot { uint64_t black_bb, white_bb, hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; uint64_t ai_nodes = 0; string opening_name; };
 
     // Outer loop: each iteration is one full game, from mode selection to game over.
     // play_again controls whether we loop back for a new game or exit after the inner loop.
@@ -291,9 +291,10 @@ int main(int argc, char** argv) {
                 vector<pair<char, string>> moves;
                 vector<int> ai_scores;
                 vector<int> ai_depths;
-                for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
+                vector<uint64_t> ai_nodes;
+                for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); ai_nodes.push_back(s.ai_nodes); }
                 char pc = (game_mode == 2) ? player_color : '\0';
-                export_game(moves, ai_scores, ai_depths, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos);
+                export_game(moves, ai_scores, ai_depths, ai_nodes, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos);
 
                 // Show the final result and let the player choose to start a new game or exit
                 play_again = render_winning_screen();
@@ -314,6 +315,7 @@ int main(int argc, char** argv) {
             // Handle different game modes
             int move_ai_score = numeric_limits<int>::min();
             int move_ai_depth = 0;
+            uint64_t move_ai_nodes = 0;
             if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
                 // PvP or PvE (Player's turn)
                 bool did_undo = false;
@@ -328,9 +330,10 @@ int main(int argc, char** argv) {
                         vector<pair<char, string>> moves;
                         vector<int> ai_scores;
                         vector<int> ai_depths;
-                        for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
+                        vector<uint64_t> ai_nodes;
+                        for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); ai_nodes.push_back(s.ai_nodes); }
                         char pc = (game_mode == 2) ? player_color : '\0';
-                        export_game(moves, ai_scores, ai_depths, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
+                        export_game(moves, ai_scores, ai_depths, ai_nodes, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
                         play_again = render_winning_screen(current_player);
                         did_resign = true;
                         break;
@@ -388,6 +391,7 @@ int main(int argc, char** argv) {
                 // clicked during the AI's turn gets silently played as the human's next move.
                 discard_pending_input();
                 pair<int, int> ai_move = predict_move(current_player, time_limit, move_ai_score, move_ai_depth);
+                move_ai_nodes = node_count;
                 discard_pending_input();
                 row = ai_move.first;
                 col = ai_move.second;
@@ -396,13 +400,13 @@ int main(int argc, char** argv) {
                 char row_char = row + '1';
                 char col_char = col + 'A';
 
-                log_move(format("Move {}: AI ({}) played {}{} (score {}, depth {}).",
-                    move_number, player_name(current_player), col_char, row_char, move_ai_score, move_ai_depth));
+                log_move(format("Move {}: AI ({}) played {}{} (score {}, depth {}, nodes {}).",
+                    move_number, player_name(current_player), col_char, row_char, move_ai_score, move_ai_depth, move_ai_nodes));
             }
 
             // Save board state to history before making the move
             string move_str = {(char)('A' + col), (char)('1' + row)};
-            history.push_back({black_bb, white_bb, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth, current_opening_name});
+            history.push_back({black_bb, white_bb, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth, move_ai_nodes, current_opening_name});
 
             // Make the move
             last_move = {row, col};

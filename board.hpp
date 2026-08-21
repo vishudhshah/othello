@@ -36,4 +36,4 @@ bool is_game_over();
 bool turn_skip(char player);
 std::vector<std::pair<int, int>> compute_valid_moves(char player);
 std::pair<int, int> calculate_scores();
-void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, const std::vector<std::string>& openings, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos = "", char resigned_by = '\0');
+void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, const std::vector<uint64_t>& ai_nodes, const std::vector<std::string>& openings, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos = "", char resigned_by = '\0');
