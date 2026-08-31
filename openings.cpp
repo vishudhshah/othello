@@ -84,7 +84,7 @@ bool openings_load(const std::string& path) {
 
         size_t bar = line.find('|');
         if (bar == std::string::npos) {
-            fprintf(stderr, "openings.txt:%d: missing '|', skipping line\n", line_no);
+            fprintf(stderr, "%s:%d: missing '|', skipping line\n", path.c_str(), line_no);
             continue;
         }
 
@@ -109,8 +109,8 @@ bool openings_load(const std::string& path) {
         while (iss >> tok) {
             int row, col;
             if (!parse_move(tok, row, col)) {
-                fprintf(stderr, "openings.txt:%d: bad move '%s' in '%s', skipping opening\n",
-                    line_no, tok.c_str(), name.c_str());
+                fprintf(stderr, "%s:%d: bad move '%s' in '%s', skipping opening\n",
+                    path.c_str(), line_no, tok.c_str(), name.c_str());
                 ok = false;
                 break;
             }
@@ -120,8 +120,8 @@ bool openings_load(const std::string& path) {
             uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
             uint64_t flip = bb_flip_mask(player_bb, opp_bb, move_bit);
             if (flip == 0) {
-                fprintf(stderr, "openings.txt:%d: illegal move '%s' in '%s', skipping opening\n",
-                    line_no, tok.c_str(), name.c_str());
+                fprintf(stderr, "%s:%d: illegal move '%s' in '%s', skipping opening\n",
+                    path.c_str(), line_no, tok.c_str(), name.c_str());
                 ok = false;
                 break;
             }

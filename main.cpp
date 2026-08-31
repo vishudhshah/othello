@@ -109,6 +109,19 @@ static int run_headless(int argc, char** argv) {
         if (it != args.end() && next(it) != args.end()) return *next(it);
         return def;
     };
+    // stoi throws on non-numeric/overflowing input; headless mode reports that
+    // the same way it reports every other bad-argument case (an ERROR line and
+    // a non-zero exit), rather than letting the exception escape main().
+    auto get_int = [&](const string& f, const string& def, int& out) -> bool {
+        string s = get_val(f, def);
+        try {
+            out = stoi(s);
+            return true;
+        } catch (...) {
+            printf("ERROR invalid %s\n", f.c_str());
+            return false;
+        }
+    };
 
     if (has_flag("--book-dump")) {
         string path = get_val("--book-dump", "openings.txt");
@@ -135,7 +148,8 @@ static int run_headless(int argc, char** argv) {
     }
 
     if (has_flag("--perft")) {
-        int depth = stoi(get_val("--perft", "1"));
+        int depth;
+        if (!get_int("--perft", "1", depth)) return 1;
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
         string pl = get_val("--player", "B");
         char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
@@ -148,7 +162,8 @@ static int run_headless(int argc, char** argv) {
     }
 
     if (has_flag("--selfplay")) {
-        int time_limit = stoi(get_val("--time", to_string(DEFAULT_TIME_LIMIT)));
+        int time_limit;
+        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
         string pl = get_val("--player", "B");
         char current_player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
@@ -184,7 +199,8 @@ static int run_headless(int argc, char** argv) {
         char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
 
         if (has_flag("--fixed-depth")) {
-            int depth = stoi(get_val("--fixed-depth", "1"));
+            int depth;
+            if (!get_int("--fixed-depth", "1", depth)) return 1;
             node_count = 0;
             int score;
             pair<int, int> mv = search_fixed_depth(player, depth, score);
@@ -193,7 +209,8 @@ static int run_headless(int argc, char** argv) {
             return 0;
         }
 
-        int time_limit = stoi(get_val("--time", to_string(DEFAULT_TIME_LIMIT)));
+        int time_limit;
+        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
         int score, out_depth;
         pair<int, int> mv = predict_move(player, time_limit, score, out_depth);
         printf("MOVE %c%d SCORE %d DEPTH %d NODES %llu\n",
