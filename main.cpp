@@ -1,14 +1,225 @@
-// clang++ -std=c++20 main.cpp constants.cpp board.cpp ai.cpp input.cpp -o main
+// See Makefile for the real build; `make` is the supported way to build this project.
 
 #include "constants.hpp"
 #include "board.hpp"
 #include "ai.hpp"
 #include "input.hpp"
 #include "ui.hpp"
+#include "zobrist.hpp"
+#include "tt.hpp"
+#include "book.hpp"
+#include "openings.hpp"
 #include <format>
 #include <limits>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
 
 using namespace std;
+
+// --- Headless CLI mode -----------------------------------------------------
+// Non-interactive entry points used for regression testing the engine (perft,
+// self-play, single-position search) without going through the ncurses TUI.
+// See the plan doc's Phase 0 for rationale; this is the harness every later
+// phase (Zobrist/TT/bitboard/book) verifies itself against.
+
+// Full-width node count to a fixed remaining ply depth. A pass (no legal
+// moves for the side to move) does not consume a ply, matching negascout's
+// own pass convention (ai.cpp) so perft node counts stay meaningful as a
+// baseline for that search.
+//
+// When verify_zobrist is set, asserts current_hash (maintained incrementally
+// by make_move) matches a from-scratch compute_hash() at every node visited —
+// this is --verify-zobrist's actual check. On mismatch, prints the offending
+// position depth and aborts the traversal early (returns 0, caller reports).
+//
+// Note: this file previously also carried a --verify-bitboard dual-run check
+// here, comparing the standalone bitboard.cpp move generator against the
+// char-array compute_valid_moves() at every node (Phase 3's parity-testing
+// window). That check passed cleanly (perft depths 1-8, plus hand-crafted
+// edge-column and near-full-board positions) and was removed once board.cpp
+// itself became bitboard-backed — there's no longer a separate char-array
+// implementation left to compare against.
+static bool zobrist_mismatch_found = false;
+static uint64_t perft(int depth, char player, bool verify_zobrist) {
+    if (verify_zobrist && !zobrist_mismatch_found && current_hash != compute_hash(black_bb, white_bb)) {
+        printf("ZOBRIST MISMATCH at perft depth=%d: current_hash=%llu compute_hash=%llu\n",
+            depth, (unsigned long long)current_hash, (unsigned long long)compute_hash(black_bb, white_bb));
+        zobrist_mismatch_found = true;
+    }
+    if (depth == 0) return 1;
+    if (is_game_over()) return 1;
+    auto moves = compute_valid_moves(player);
+    if (moves.empty()) {
+        return perft(depth, get_opponent(player), verify_zobrist);
+    }
+    uint64_t nodes = 0;
+    for (auto& mv : moves) {
+        MoveUndo undo = make_move_undoable(mv.first, mv.second, player);
+        nodes += perft(depth - 1, get_opponent(player), verify_zobrist);
+        unmake_move(undo);
+    }
+    return nodes;
+}
+
+// Loads a starting position from --fen/--64 if given, else the standard
+// initial position. Returns false (and prints an error) on a bad position string.
+static bool load_headless_position(const string& fen, const string& s64) {
+    if (!fen.empty()) {
+        if (!parse_fen(fen)) { printf("ERROR invalid --fen\n"); return false; }
+    } else if (!s64.empty()) {
+        if (!parse_64char(s64)) { printf("ERROR invalid --64\n"); return false; }
+    } else {
+        initialize_board();
+    }
+    return true;
+}
+
+// Fixed-depth root search, bypassing predict_move's time-based IDDFS budget.
+// Used only by --search --fixed-depth, for an exact apples-to-apples TT-on
+// vs TT-off (--no-tt) comparison at a controlled depth — predict_move's own
+// time-boxed search can legitimately reach a different depth run-to-run.
+static pair<int, int> search_fixed_depth(char player, int depth, int& out_score) {
+    char opponent = get_opponent(player);
+    vector<pair<int, int>> moves = get_sorted_moves(player);
+    pair<int, int> best_move = moves[0];
+    int best_score = numeric_limits<int>::min();
+    for (auto& mv : moves) {
+        MoveUndo undo = make_move_undoable(mv.first, mv.second, player);
+        int score = -negascout(depth - 1, numeric_limits<int>::min() + 1, numeric_limits<int>::max(), opponent);
+        unmake_move(undo);
+        if (score > best_score) {
+            best_score = score;
+            best_move = mv;
+        }
+    }
+    out_score = best_score;
+    return best_move;
+}
+
+// Returns 0/1 (a real exit code) if argv requested a headless mode and it ran;
+// returns -1 if no headless flag was present, meaning the normal TUI should start.
+static int run_headless(int argc, char** argv) {
+    vector<string> args(argv + 1, argv + argc);
+    auto has_flag = [&](const string& f) { return find(args.begin(), args.end(), f) != args.end(); };
+    auto get_val = [&](const string& f, const string& def = "") -> string {
+        auto it = find(args.begin(), args.end(), f);
+        if (it != args.end() && next(it) != args.end()) return *next(it);
+        return def;
+    };
+    // stoi throws on non-numeric/overflowing input; headless mode reports that
+    // the same way it reports every other bad-argument case (an ERROR line and
+    // a non-zero exit), rather than letting the exception escape main().
+    auto get_int = [&](const string& f, const string& def, int& out) -> bool {
+        string s = get_val(f, def);
+        try {
+            out = stoi(s);
+            return true;
+        } catch (...) {
+            printf("ERROR invalid %s\n", f.c_str());
+            return false;
+        }
+    };
+
+    if (has_flag("--book-dump")) {
+        string path = get_val("--book-dump", "openings.txt");
+        if (!openings_load(path)) {
+            printf("ERROR failed to load %s\n", path.c_str());
+            return 1;
+        }
+        printf("Loaded %zu book records from %s\n", book_size(), path.c_str());
+        book_dump_all();
+        return 0;
+    }
+
+    if (has_flag("--opening-name")) {
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+        string name;
+        if (opening_name_probe(black_bb, white_bb, player, name)) {
+            printf("OPENING %s\n", name.c_str());
+        } else {
+            printf("OPENING none\n");
+        }
+        return 0;
+    }
+
+    if (has_flag("--perft")) {
+        int depth;
+        if (!get_int("--perft", "1", depth)) return 1;
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+        bool verify_zobrist = has_flag("--verify-zobrist");
+        zobrist_mismatch_found = false;
+        uint64_t nodes = perft(depth, player, verify_zobrist);
+        printf("PERFT depth=%d nodes=%llu\n", depth, (unsigned long long)nodes);
+        if (verify_zobrist) printf("ZOBRIST %s\n", zobrist_mismatch_found ? "MISMATCH" : "OK");
+        return 0;
+    }
+
+    if (has_flag("--selfplay")) {
+        int time_limit;
+        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char current_player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+        int move_number = 0;
+        while (!is_game_over()) {
+            if (turn_skip(current_player)) {
+                current_player = get_opponent(current_player);
+                continue;
+            }
+            move_number++;
+            int score, out_depth;
+            pair<int, int> mv = predict_move(current_player, time_limit, score, out_depth);
+            make_move(mv.first, mv.second, current_player);
+            char next_player = get_opponent(current_player);
+            string opening_name;
+            bool has_name = opening_name_probe(black_bb, white_bb, next_player, opening_name);
+            printf("MOVE %d %c %c%d SCORE %d DEPTH %d NODES %llu%s%s\n",
+                move_number, current_player, (char)('A' + mv.second), mv.first + 1,
+                score, out_depth, (unsigned long long)node_count,
+                has_name ? " OPENING " : "", has_name ? opening_name.c_str() : "");
+            fflush(stdout);
+            current_player = next_player;
+        }
+        auto [b_score, w_score] = calculate_scores();
+        printf("RESULT BLACK %d WHITE %d\n", b_score, w_score);
+        return 0;
+    }
+
+    if (has_flag("--search")) {
+        if (has_flag("--no-tt")) tt_set_enabled(false);
+        if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
+        string pl = get_val("--player", "B");
+        char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
+
+        if (has_flag("--fixed-depth")) {
+            int depth;
+            if (!get_int("--fixed-depth", "1", depth)) return 1;
+            node_count = 0;
+            int score;
+            pair<int, int> mv = search_fixed_depth(player, depth, score);
+            printf("MOVE %c%d SCORE %d DEPTH %d NODES %llu\n",
+                (char)('A' + mv.second), mv.first + 1, score, depth, (unsigned long long)node_count);
+            return 0;
+        }
+
+        int time_limit;
+        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
+        int score, out_depth;
+        pair<int, int> mv = predict_move(player, time_limit, score, out_depth);
+        printf("MOVE %c%d SCORE %d DEPTH %d NODES %llu\n",
+            (char)('A' + mv.second), mv.first + 1, score, out_depth, (unsigned long long)node_count);
+        return 0;
+    }
+
+    return -1;
+}
 
 /**
  * @brief Othello game
@@ -16,12 +227,19 @@ using namespace std;
  * @author Vishudh Shah
  * @since 2024-06-26
  */
-int main() {
+int main(int argc, char** argv) {
+    init_zobrist_table();
+    tt_clear();
+    openings_load("openings.txt"); // silently proceeds with no book/names if the file doesn't exist
+
+    int headless_result = run_headless(argc, argv);
+    if (headless_result >= 0) return headless_result;
+
     ui_init();
     struct UiGuard { ~UiGuard() { ui_teardown(); } } ui_guard;
 
     // History for undo: each entry stores the board state, active player, move number, and move made before a move
-    struct Snapshot { Board board; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; };
+    struct Snapshot { uint64_t black_bb, white_bb, hash; char player; int move_num; string move; int ai_score = numeric_limits<int>::min(); int ai_depth = 0; uint64_t ai_nodes = 0; string opening_name; };
 
     // Outer loop: each iteration is one full game, from mode selection to game over.
     // play_again controls whether we loop back for a new game or exit after the inner loop.
@@ -68,9 +286,19 @@ int main() {
         // Initialize the move number
         int move_number = 0;
 
-        render_game_screen(current_player, format("{}'s turn.", player_name(current_player)));
+        // Sticky: once a curated opening matches, keep showing it (never
+        // clear back to blank) until a deeper/different match replaces it —
+        // matches how these labels behave in other Othello apps.
+        string current_opening_name;
+
+        render_game_screen(current_player, format("{}'s turn.", player_name(current_player)), current_opening_name);
 
         vector<Snapshot> history;
+        // Parallel to history: the opening name as it stood right after each
+        // move was made (Snapshot::opening_name is the *pre*-move value, used
+        // for undo — this is the post-move value actually shown to the
+        // player, which is what the CSV export should record).
+        vector<string> move_openings;
 
         // Game loop
         for (;;) {
@@ -80,9 +308,10 @@ int main() {
                 vector<pair<char, string>> moves;
                 vector<int> ai_scores;
                 vector<int> ai_depths;
-                for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
+                vector<uint64_t> ai_nodes;
+                for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); ai_nodes.push_back(s.ai_nodes); }
                 char pc = (game_mode == 2) ? player_color : '\0';
-                export_game(moves, ai_scores, ai_depths, game_mode, pc, time_limit_b, time_limit_w, start_pos);
+                export_game(moves, ai_scores, ai_depths, ai_nodes, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos);
 
                 // Show the final result and let the player choose to start a new game or exit
                 play_again = render_winning_screen();
@@ -98,11 +327,12 @@ int main() {
 
             // Count the move number
             move_number++;
-            render_game_screen(current_player, format("Move {} - {}'s turn.", move_number, player_name(current_player)));
+            render_game_screen(current_player, format("Move {} - {}'s turn.", move_number, player_name(current_player)), current_opening_name);
 
             // Handle different game modes
             int move_ai_score = numeric_limits<int>::min();
             int move_ai_depth = 0;
+            uint64_t move_ai_nodes = 0;
             if (game_mode == 1 || (game_mode == 2 && current_player == player_color)) {
                 // PvP or PvE (Player's turn)
                 bool did_undo = false;
@@ -117,9 +347,10 @@ int main() {
                         vector<pair<char, string>> moves;
                         vector<int> ai_scores;
                         vector<int> ai_depths;
-                        for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); }
+                        vector<uint64_t> ai_nodes;
+                        for (const auto& s : history) { moves.emplace_back(s.player, s.move); ai_scores.push_back(s.ai_score); ai_depths.push_back(s.ai_depth); ai_nodes.push_back(s.ai_nodes); }
                         char pc = (game_mode == 2) ? player_color : '\0';
-                        export_game(moves, ai_scores, ai_depths, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
+                        export_game(moves, ai_scores, ai_depths, ai_nodes, move_openings, game_mode, pc, time_limit_b, time_limit_w, start_pos, current_player);
                         play_again = render_winning_screen(current_player);
                         did_resign = true;
                         break;
@@ -131,14 +362,19 @@ int main() {
                             // In PvE, pop until we find the player's own snapshot (handles skipped turns)
                             Snapshot restored = history.back();
                             history.pop_back();
+                            move_openings.pop_back();
                             if (game_mode == 2) {
                                 while (!history.empty() && restored.player != player_color) {
                                     restored = history.back();
                                     history.pop_back();
+                                    move_openings.pop_back();
                                 }
                             }
-                            board = restored.board;
+                            black_bb = restored.black_bb;
+                            white_bb = restored.white_bb;
+                            current_hash = restored.hash;
                             current_player = restored.player;
+                            current_opening_name = restored.opening_name;
                             move_number = restored.move_num - 1; // -1 so loop's ++ restores correct number
                             if (!history.empty()) {
                                 const auto& prev = history.back();
@@ -172,6 +408,7 @@ int main() {
                 // clicked during the AI's turn gets silently played as the human's next move.
                 discard_pending_input();
                 pair<int, int> ai_move = predict_move(current_player, time_limit, move_ai_score, move_ai_depth);
+                move_ai_nodes = node_count;
                 discard_pending_input();
                 row = ai_move.first;
                 col = ai_move.second;
@@ -180,13 +417,13 @@ int main() {
                 char row_char = row + '1';
                 char col_char = col + 'A';
 
-                log_move(format("Move {}: AI ({}) played {}{} (score {}, depth {}).",
-                    move_number, player_name(current_player), col_char, row_char, move_ai_score, move_ai_depth));
+                log_move(format("Move {}: AI ({}) played {}{} (score {}, depth {}, nodes {}).",
+                    move_number, player_name(current_player), col_char, row_char, move_ai_score, move_ai_depth, move_ai_nodes));
             }
 
             // Save board state to history before making the move
             string move_str = {(char)('A' + col), (char)('1' + row)};
-            history.push_back({board, current_player, move_number, move_str, move_ai_score, move_ai_depth});
+            history.push_back({black_bb, white_bb, current_hash, current_player, move_number, move_str, move_ai_score, move_ai_depth, move_ai_nodes, current_opening_name});
 
             // Make the move
             last_move = {row, col};
@@ -194,6 +431,13 @@ int main() {
 
             // Switch to the other player after the turn is complete
             switch_player(current_player);
+
+            // Sticky opening-name display: only overwrite on an actual match.
+            string matched_opening;
+            if (opening_name_probe(black_bb, white_bb, current_player, matched_opening)) {
+                current_opening_name = matched_opening;
+            }
+            move_openings.push_back(current_opening_name);
         }
     }
 

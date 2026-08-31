@@ -1,4 +1,6 @@
 #include "board.hpp"
+#include "zobrist.hpp"
+#include "bitboard.hpp"
 #include <format>
 #include <limits>
 #include <fstream>
@@ -11,11 +13,23 @@ std::string player_name(char player) {
     return player == PLAYER1 ? "Black" : "White";
 }
 
+char cell_at(int row, int col) {
+    int sq = row * BOARD_SIZE + col;
+    if ((black_bb >> sq) & 1ULL) return PLAYER1;
+    if ((white_bb >> sq) & 1ULL) return PLAYER2;
+    return EMPTY;
+}
+
 void initialize_board() {
-    board[BOARD_SIZE/2 - 1][BOARD_SIZE/2 - 1] = PLAYER2;
-    board[BOARD_SIZE/2 - 1][BOARD_SIZE/2]     = PLAYER1;
-    board[BOARD_SIZE/2]    [BOARD_SIZE/2 - 1] = PLAYER1;
-    board[BOARD_SIZE/2]    [BOARD_SIZE/2]     = PLAYER2;
+    black_bb = 0;
+    white_bb = 0;
+    int tl = (BOARD_SIZE/2 - 1) * BOARD_SIZE + (BOARD_SIZE/2 - 1); // top-left of center: PLAYER2
+    int tr = (BOARD_SIZE/2 - 1) * BOARD_SIZE + (BOARD_SIZE/2);     // top-right of center: PLAYER1
+    int bl = (BOARD_SIZE/2)     * BOARD_SIZE + (BOARD_SIZE/2 - 1); // bottom-left of center: PLAYER1
+    int br = (BOARD_SIZE/2)     * BOARD_SIZE + (BOARD_SIZE/2);     // bottom-right of center: PLAYER2
+    white_bb |= (1ULL << tl) | (1ULL << br);
+    black_bb |= (1ULL << tr) | (1ULL << bl);
+    current_hash = compute_hash(black_bb, white_bb);
 }
 
 bool parse_fen(const std::string& fen) {
@@ -30,161 +44,119 @@ bool parse_fen(const std::string& fen) {
 
     if ((int)rows.size() != BOARD_SIZE) return false;
 
+    // Parsed into locals and only committed on full success — unlike the
+    // pre-bitboard version, a failed parse now leaves the live position
+    // untouched instead of partially overwritten.
+    uint64_t new_black = 0, new_white = 0;
     for (int r = 0; r < BOARD_SIZE; r++) {
         int col = 0;
         for (char c : rows[r]) {
-            if      (c == 'B' || c == 'b') { if (col >= BOARD_SIZE) return false; board[r][col++] = PLAYER1; }
-            else if (c == 'W' || c == 'w') { if (col >= BOARD_SIZE) return false; board[r][col++] = PLAYER2; }
-            else if (c >= '1' && c <= '0' + BOARD_SIZE) { int n = c - '0'; if (col + n > BOARD_SIZE) return false;
-                                             for (int k = 0; k < n; k++) board[r][col++] = EMPTY; }
+            if      (c == 'B' || c == 'b') { if (col >= BOARD_SIZE) return false; new_black |= 1ULL << (r * BOARD_SIZE + col++); }
+            else if (c == 'W' || c == 'w') { if (col >= BOARD_SIZE) return false; new_white |= 1ULL << (r * BOARD_SIZE + col++); }
+            else if (c >= '1' && c <= '0' + BOARD_SIZE) { int n = c - '0'; if (col + n > BOARD_SIZE) return false; col += n; }
             else return false; // unknown character
         }
         if (col != BOARD_SIZE) return false; // row didn't sum to 8
     }
+    black_bb = new_black;
+    white_bb = new_white;
+    current_hash = compute_hash(black_bb, white_bb);
     return true;
 }
 
 bool parse_64char(const std::string& s) {
     if ((int)s.length() != BOARD_SIZE * BOARD_SIZE) return false;
 
+    uint64_t new_black = 0, new_white = 0;
     for (int i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
         char c = s[i];
-        if      (c == 'B' || c == 'b') board[i / BOARD_SIZE][i % BOARD_SIZE] = PLAYER1;
-        else if (c == 'W' || c == 'w') board[i / BOARD_SIZE][i % BOARD_SIZE] = PLAYER2;
-        else if (c == '.')             board[i / BOARD_SIZE][i % BOARD_SIZE] = EMPTY;
+        if      (c == 'B' || c == 'b') new_black |= 1ULL << i;
+        else if (c == 'W' || c == 'w') new_white |= 1ULL << i;
+        else if (c == '.')             { /* empty, nothing to set */ }
         else return false; // unknown character
     }
+    black_bb = new_black;
+    white_bb = new_white;
+    current_hash = compute_hash(black_bb, white_bb);
     return true;
 }
 
 std::vector<std::pair<int, int>> compute_valid_moves(char player) {
-    std::vector<std::pair<int, int>> valid_moves;
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
-                valid_moves.emplace_back(i, j);
-            }
-        }
+    uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
+    uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
+    return bb_to_coords(bb_get_moves(player_bb, opp_bb));
+}
+
+MoveUndo make_move_undoable(int row, int col, char player) {
+    int player_idx = (player == PLAYER1) ? 0 : 1;
+    int opponent_idx = 1 - player_idx;
+    uint64_t move_bit = 1ULL << (row * BOARD_SIZE + col);
+    uint64_t& player_bb = (player == PLAYER1) ? black_bb : white_bb;
+    uint64_t& opp_bb = (player == PLAYER1) ? white_bb : black_bb;
+
+    uint64_t flip_bb = bb_flip_mask(player_bb, opp_bb, move_bit);
+    player_bb |= move_bit | flip_bb;
+    opp_bb &= ~flip_bb;
+
+    current_hash ^= ZOBRIST_TABLE[player_idx][row * BOARD_SIZE + col];
+    uint64_t fb = flip_bb;
+    while (fb) {
+        int sq = __builtin_ctzll(fb);
+        current_hash ^= ZOBRIST_TABLE[opponent_idx][sq];
+        current_hash ^= ZOBRIST_TABLE[player_idx][sq];
+        fb &= fb - 1;
     }
-    return valid_moves;
+
+    return {row, col, player, flip_bb};
 }
 
 void make_move(int row, int col, char player) {
-    board[row][col] = player;
+    make_move_undoable(row, col, player);
+}
 
-    // Check for opponent pieces in all eight directions
-    int directions[8][2] = {{1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}};
-    for (int i = 0; i < 8; i++) {
-        int dx = directions[i][0];
-        int dy = directions[i][1];
-        int x = col + dx;
-        int y = row + dy;
+void unmake_move(const MoveUndo& undo) {
+    int player_idx = (undo.player == PLAYER1) ? 0 : 1;
+    int opponent_idx = 1 - player_idx;
+    uint64_t move_bit = 1ULL << (undo.row * BOARD_SIZE + undo.col);
+    uint64_t& player_bb = (undo.player == PLAYER1) ? black_bb : white_bb;
+    uint64_t& opp_bb = (undo.player == PLAYER1) ? white_bb : black_bb;
 
-        // Check if there is an opponent piece in the current direction
-        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
-            // Move in the current direction until reaching the boundary or a player piece or an empty cell
-            while (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
-                x += dx;
-                y += dy;
-            }
+    player_bb &= ~(move_bit | undo.flip_bb);
+    opp_bb |= undo.flip_bb;
 
-            // Flip all opponent pieces in the current direction, going backwards
-            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] == player) {
-                x -= dx;
-                y -= dy;
-                while (x != col || y != row) {
-                    board[y][x] = player;
-                    x -= dx;
-                    y -= dy;
-                }
-            }
-        }
+    current_hash ^= ZOBRIST_TABLE[player_idx][undo.row * BOARD_SIZE + undo.col];
+    uint64_t fb = undo.flip_bb;
+    while (fb) {
+        int sq = __builtin_ctzll(fb);
+        current_hash ^= ZOBRIST_TABLE[opponent_idx][sq];
+        current_hash ^= ZOBRIST_TABLE[player_idx][sq];
+        fb &= fb - 1;
     }
 }
 
 bool is_valid_move(int row, int col, char player) {
-    // Check if the position is within bounds and the cell is empty
-    if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE || board[row][col] != EMPTY) {
-        return false;
-    }
-
-    // Check for opponent pieces in all eight directions
-    // Create Cartesian coordinate system for directions and iterate through each direction
-    int directions[8][2] = {{1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}, {0, 1}, {1, 1}};
-    for (int i = 0; i < 8; i++) {
-        int dx = directions[i][0];
-        int dy = directions[i][1];
-        int x = col + dx;
-        int y = row + dy;
-
-        // Check if there is an opponent piece in the current direction
-        if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
-            // Move in the current direction until reaching the boundary or a player piece or an empty cell
-            while (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] != player && board[y][x] != EMPTY) {
-                x += dx;
-                y += dy;
-            }
-
-            // If a player piece is found, the move is valid
-            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE && board[y][x] == player) {
-                return true;
-            }
-        }
-    }
-
-    // If no valid move is found, the move is invalid
-    return false;
+    if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return false;
+    uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
+    uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
+    uint64_t moves = bb_get_moves(player_bb, opp_bb);
+    return (moves >> (row * BOARD_SIZE + col)) & 1ULL;
 }
 
 bool is_game_over() {
-    // If there's at least one empty cell with a valid move for either player, the game is not over
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] == EMPTY && (is_valid_move(i, j, PLAYER1) || is_valid_move(i, j, PLAYER2))) {
-                return false;
-            }
-        }
-    }
-
-    // If all cells are filled or no valid move exists for either player, the game is over
-    return true;
+    return bb_get_moves(black_bb, white_bb) == 0 && bb_get_moves(white_bb, black_bb) == 0;
 }
 
 bool turn_skip(char player) {
-    // Iterate through all cells in the board
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            // In an empty cell if there is a valid move for player, the turn is not skipped
-            if (board[i][j] == EMPTY && is_valid_move(i, j, player)) {
-                return false;
-            }
-        }
-    }
-
-    // If no valid moves exist for player, the turn is skipped
-    return true;
+    uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
+    uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
+    return bb_get_moves(player_bb, opp_bb) == 0;
 }
 
 std::pair<int, int> calculate_scores() {
-    // Initialize counters for both scores
-    int player1_score = 0;
-    int player2_score = 0;
-
-    // Iterate through all cells in the board and count the number of pieces for each player
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] == PLAYER1) {
-                player1_score++;
-            } else if (board[i][j] == PLAYER2) {
-                player2_score++;
-            }
-        }
-    }
-
-    return std::make_pair(player1_score, player2_score);
+    return std::make_pair(__builtin_popcountll(black_bb), __builtin_popcountll(white_bb));
 }
 
-void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
+void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, const std::vector<uint64_t>& ai_nodes, const std::vector<std::string>& openings, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
     // Build timestamped base filename inside logs/ folder
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
@@ -247,11 +219,11 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, const s
     std::string time_limit_b_str = (game_mode == 2 && player_color == PLAYER1) ? "" : std::to_string(time_limit_b);
     std::string time_limit_w_str = (game_mode == 2 && player_color == PLAYER2) ? "" : std::to_string(time_limit_w);
     std::ofstream csv(base + ".csv");
-    csv << "move_number,score,depth,date,game_mode,player_color,time_limit_b,time_limit_w\n";
+    csv << "move_number,score,depth,nodes,opening,date,game_mode,player_color,time_limit_b,time_limit_w\n";
     for (int i = 0; i < (int)moves.size(); i++) {
         if (ai_scores[i] != std::numeric_limits<int>::min())
-            csv << std::format("{},{},{},{},{},{},{},{}\n", i + 1, ai_scores[i], ai_depths[i],
-                date_str, mode_str, player_color_str, time_limit_b_str, time_limit_w_str);
+            csv << std::format("{},{},{},{},{},{},{},{},{},{}\n", i + 1, ai_scores[i], ai_depths[i], ai_nodes[i],
+                openings[i], date_str, mode_str, player_color_str, time_limit_b_str, time_limit_w_str);
     }
     csv.close();
 
