@@ -67,79 +67,66 @@ int game_phase() {
     }
 }
 
-// Compute stable disc counts for both players in one pass.
-// A disc is stable if it cannot be flipped for the rest of the game.
-// Returns {player1_stable, player2_stable}.
+// Sound local stability detection using bitboards. A disc is protected on
+// each axis by either a completely occupied line, the board boundary, or an
+// immediately adjacent stable disc of its own color. This avoids searching
+// future games; some discs stable only because of global move constraints
+// can remain unrecognized.
+static std::pair<uint64_t, uint64_t> stable_discs_both() {
+    constexpr uint64_t A = 0x0101010101010101ULL;
+    constexpr uint64_t H = 0x8080808080808080ULL;
+    constexpr uint64_t AB = 0x0303030303030303ULL;
+    constexpr uint64_t GH = 0xc0c0c0c0c0c0c0c0ULL;
+    constexpr uint64_t ABCD = 0x0f0f0f0f0f0f0f0fULL;
+    constexpr uint64_t EFGH = 0xf0f0f0f0f0f0f0f0ULL;
+    constexpr uint64_t ROW_EDGES = 0xff000000000000ffULL;
+    constexpr uint64_t EDGES = A | H | ROW_EDGES;
+
+    // Spread empties across each complete row/column/diagonal using shifts
+    // of 1, 2, and 4 squares. The complement identifies lines with no empty
+    // square, which cannot receive a future move along that axis. File masks
+    // prevent shifts from wrapping between rows.
+    uint64_t empty = ~(black_bb | white_bb);
+    uint64_t horizontal = empty;
+    horizontal |= ((horizontal & ~H) << 1) | ((horizontal & ~A) >> 1);
+    horizontal |= ((horizontal & ~GH) << 2) | ((horizontal & ~AB) >> 2);
+    horizontal |= ((horizontal & ~EFGH) << 4) | ((horizontal & ~ABCD) >> 4);
+    uint64_t vertical = empty;
+    vertical |= (vertical << 8) | (vertical >> 8);
+    vertical |= (vertical << 16) | (vertical >> 16);
+    vertical |= (vertical << 32) | (vertical >> 32);
+    uint64_t diagonal = empty;
+    diagonal |= ((diagonal & ~H) << 9) | ((diagonal & ~A) >> 9);
+    diagonal |= ((diagonal & ~GH) << 18) | ((diagonal & ~AB) >> 18);
+    diagonal |= ((diagonal & ~EFGH) << 36) | ((diagonal & ~ABCD) >> 36);
+    uint64_t anti_diagonal = empty;
+    anti_diagonal |= ((anti_diagonal & ~A) << 7) | ((anti_diagonal & ~H) >> 7);
+    anti_diagonal |= ((anti_diagonal & ~AB) << 14) | ((anti_diagonal & ~GH) >> 14);
+    anti_diagonal |= ((anti_diagonal & ~ABCD) << 28) | ((anti_diagonal & ~EFGH) >> 28);
+
+    const uint64_t horizontal_safe = ~horizontal | A | H;
+    const uint64_t vertical_safe = ~vertical | ROW_EDGES;
+    const uint64_t diagonal_safe = ~diagonal | EDGES;
+    const uint64_t anti_diagonal_safe = ~anti_diagonal | EDGES;
+    auto find_stable = [&](uint64_t discs) {
+        uint64_t stable = discs & horizontal_safe & vertical_safe
+                                & diagonal_safe & anti_diagonal_safe;
+        for (;;) {
+            uint64_t next = discs
+                & (horizontal_safe | ((stable & ~H) << 1) | ((stable & ~A) >> 1))
+                & (vertical_safe | (stable << 8) | (stable >> 8))
+                & (diagonal_safe | ((stable & ~H) << 9) | ((stable & ~A) >> 9))
+                & (anti_diagonal_safe | ((stable & ~A) << 7) | ((stable & ~H) >> 7));
+            if (next == stable) return stable;
+            stable = next;
+        }
+    };
+    return {find_stable(black_bb), find_stable(white_bb)};
+}
+
 static std::pair<int,int> count_stable_both() {
-    bool stable[2][BOARD_SIZE][BOARD_SIZE] = {};  // [0]=PLAYER1, [1]=PLAYER2
-    const char players[2] = {PLAYER1, PLAYER2};
-
-    // Pass 1: corners
-    const int corners[4][2] = {{0,0},{0,BOARD_SIZE-1},{BOARD_SIZE-1,0},{BOARD_SIZE-1,BOARD_SIZE-1}};
-    for (auto& c : corners)
-        for (int p = 0; p < 2; p++)
-            if (cell_at(c[0], c[1]) == players[p])
-                stable[p][c[0]][c[1]] = true;
-
-    // Pass 2: edges — propagate from stable corners along each edge
-    for (int row : {0, BOARD_SIZE-1}) {
-        for (int p = 0; p < 2; p++) {
-            for (int j = 1; j < BOARD_SIZE; j++)
-                if (cell_at(row, j) == players[p] && stable[p][row][j-1]) stable[p][row][j] = true;
-            for (int j = BOARD_SIZE - 2; j >= 0; j--)
-                if (cell_at(row, j) == players[p] && stable[p][row][j+1]) stable[p][row][j] = true;
-        }
-    }
-    for (int col : {0, BOARD_SIZE-1}) {
-        for (int p = 0; p < 2; p++) {
-            for (int i = 1; i < BOARD_SIZE; i++)
-                if (cell_at(i, col) == players[p] && stable[p][i-1][col]) stable[p][i][col] = true;
-            for (int i = BOARD_SIZE - 2; i >= 0; i--)
-                if (cell_at(i, col) == players[p] && stable[p][i+1][col]) stable[p][i][col] = true;
-        }
-    }
-
-    // Pass 3: interior — fixpoint iteration, both players simultaneously
-    // A disc is stable if, in all 4 axes, it is bounded on both sides by a wall or stable disc.
-    static const int axes[4][2] = {{0,1},{1,0},{1,1},{1,-1}};
-    bool changed = true;
-    while (changed) {
-        changed = false;
-        for (int i = 0; i < BOARD_SIZE; i++) {
-            for (int j = 0; j < BOARD_SIZE; j++) {
-                for (int p = 0; p < 2; p++) {
-                    if (cell_at(i, j) != players[p] || stable[p][i][j]) continue;
-                    bool all_ok = true;
-                    for (auto& ax : axes) {
-                        int dr = ax[0], dc = ax[1];
-                        bool ok_neg = false, ok_pos = false;
-                        int r = i - dr, c = j - dc;
-                        while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-                            if (stable[p][r][c]) { ok_neg = true; break; }
-                            r -= dr; c -= dc;
-                        }
-                        if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_neg = true;
-                        r = i + dr; c = j + dc;
-                        while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-                            if (stable[p][r][c]) { ok_pos = true; break; }
-                            r += dr; c += dc;
-                        }
-                        if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) ok_pos = true;
-                        if (!ok_neg || !ok_pos) { all_ok = false; break; }
-                    }
-                    if (all_ok) { stable[p][i][j] = true; changed = true; }
-                }
-            }
-        }
-    }
-
-    int c1 = 0, c2 = 0;
-    for (int i = 0; i < BOARD_SIZE; i++)
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            c1 += stable[0][i][j];
-            c2 += stable[1][i][j];
-        }
-    return {c1, c2};
+    auto [black, white] = stable_discs_both();
+    return {__builtin_popcountll(black), __builtin_popcountll(white)};
 }
 
 // Returns a correction to position-weight score for danger squares (X/C-squares)
