@@ -457,13 +457,10 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
     std::vector<std::pair<int, int>> sorted_moves = get_sorted_moves(player);
 
     // If there's only one valid move, return it immediately (no search).
-    // Still report a real score instead of leaving out_score/out_depth unset:
-    // a static evaluation of the resulting position, same as the depth == 0
-    // leaf case below, at negligible cost (no recursion into the opponent).
+    // Deliberately report score 0: a static evaluation would be misleading
+    // when no search was performed for this forced move.
     if (sorted_moves.size() == 1) {
-        MoveUndo undo = make_move_undoable(sorted_moves[0].first, sorted_moves[0].second, player);
-        out_score = evaluate_board(player, game_phase());
-        unmake_move(undo);
+        out_score = 0;
         out_depth = 0;
         return sorted_moves[0];
     }
