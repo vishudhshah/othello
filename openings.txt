@@ -90,14 +90,12 @@ Maruoka Buffalo|f5 f6 e6 d6 c3 g4 c6
 Melnikov / Bat (Piau Continuation 1)|f5 f6 e6 d6 c5 e3 e7 c7 d7 c6 d3
 Mimura|f5 d6 c5 f4 e3 d3
 Mimura variation II|f5 f6 e6 d6 e7 g5 g6 e3 c5 c6 d3 c4 b3
-Mouse|c4 c5 d6 c3 e6
 Murakami Variation|f5 d6 c5 f4 e3 c6 d3 f6 e6 d7 g4 c4 g6
 No-Cat|f5 d6 c4 g5
 No-Cat (Continuation)|f5 d6 c4 g5 c6 c5 d7 d3 b4 c3 e3 f3
 No-Kung|f5 d6 c3 d3 c4 f4 f6 g5
 No-Kung (Continuation)|f5 d6 c3 d3 c4 f4 f6 g5 e3 f3 g4 h3 g3 f2
 Owaku|c4 e3 f4 c5 d6 c3 c6
-Parallel Opening|f5 f4
 Parallel Rabbit|c4 e3 f4 c5 d6 f3 e6 b4
 Perpendicular Opening|f5 d6
 Pyramid / Checkerboarding Peasant|f5 f6 e6 d6 f7 e3 d7 e7 c6 c5 d3
@@ -144,4 +142,3 @@ Tsuchinoko|c4 c3 d3 c5 b3 e3
 Wild Rabbit|c4 e3 f3
 Wild Strawberry|c4 c3 d3 c5 b4 d2 c2 e3
 Wing Variation|f5 f6 d3 f4
-X-square Opening|f5 f6 e6 d6 g7
