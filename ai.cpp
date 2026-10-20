@@ -525,8 +525,18 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
             // Simulate the move, keeping an undo record instead of copying the board
             MoveUndo undo = make_move_undoable(move.first, move.second, player);
 
-            // Call negascout to predict the score
-            int score = -negascout(current_depth, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
+            // Call negascout to predict the score.
+            //
+            // Depth accounting: the root move is already made, so passing
+            // current_depth - 1 makes the reported "depth" count plies BELOW
+            // the root move — the same convention as --search --fixed-depth
+            // (search_fixed_depth passes depth - 1 after making the root
+            // move). Before this alignment, timed mode's "depth D" silently
+            // meant fixed-depth mode's "depth D+1" (one ply deeper), which
+            // made CSV/log depth numbers incomparable across the two paths.
+            // Same tree is searched as before; only the reported number
+            // changes (D -> D-1).
+            int score = -negascout(current_depth - 1, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
 
             // Undo the move
             unmake_move(undo);
@@ -540,6 +550,10 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
 
         // Update the best move and score if we explored all moves at this depth
         if (completed_depth) {
+            // current_depth here counts plies below the root move (the root
+            // move itself is not counted — see the negascout call above), so
+            // reporting it directly keeps timed-mode depth equal to
+            // fixed-depth mode's for the same search.
             best_depth = current_depth;
             best_score = current_best_score;
             best_move = current_best_move;
