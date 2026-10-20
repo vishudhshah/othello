@@ -11,6 +11,15 @@
 // (see main.cpp's --selfplay/--search flags) and later for measuring TT hit rate.
 extern uint64_t node_count;
 
+// Shared soft deadline for time-boxed searches. predict_move() sets it before
+// starting IDDFS; negascout() checks it every node and aborts (via the
+// search_aborted flag) when exceeded, so one deep subtree can no longer run
+// arbitrarily past the requested time limit. The fixed-depth --search
+// benchmark path leaves it unset (steady_clock::time_point()), disabling the
+// checks entirely so fixed-depth node counts stay exact and deterministic.
+extern std::chrono::steady_clock::time_point search_deadline;
+extern bool search_aborted;
+
 int game_phase();
 int evaluate_board(char player, int phase);
 std::vector<std::pair<int, int>> get_sorted_moves(char player);

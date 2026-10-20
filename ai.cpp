@@ -9,6 +9,12 @@
 
 uint64_t node_count = 0;
 
+// Soft deadline + abort flag for time-boxed searches (see ai.hpp). Default
+// state = no deadline, never aborted, so fixed-depth benchmark searches are
+// completely unaffected.
+std::chrono::steady_clock::time_point search_deadline{};
+bool search_aborted = false;
+
 // Killer-move and history-heuristic move ordering. Neither changes the
 // search's result (negascout still explores the same set of moves, alpha-
 // beta pruning is still exact) — they only change what order sibling moves
@@ -280,6 +286,19 @@ std::vector<std::pair<int, int>> get_sorted_moves(char player) {
 
 int negascout(int depth, int alpha, int beta, char player) {
     node_count++;
+
+    // Soft-deadline check: abort the moment the time budget is gone. The flag
+    // unwinds every caller; nothing is written to the TT after it is raised
+    // (see the tt_store guard below), and predict_move() discards the whole
+    // iteration's results, so the abort never leaks a bad score into a move
+    // decision or a benchmark. The check is one clock read per node — cheap
+    // relative to the node's own work.
+    if (search_deadline != std::chrono::steady_clock::time_point{} &&
+        std::chrono::steady_clock::now() >= search_deadline) {
+        search_aborted = true;
+        return 0;
+    }
+
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
     // Base case: game is over or depth limit reached
@@ -421,6 +440,11 @@ int negascout(int depth, int alpha, int beta, char player) {
         }
     }
 
+    // Abort unwind: never let a dead subtree's score into the TT — a stored
+    // bound derived from aborted children is garbage (children returned 0
+    // because of the clock, not because the position scores 0).
+    if (search_aborted) return best_score;
+
     uint8_t bound = (best_score <= orig_alpha) ? BOUND_UPPER
                    : (best_score >= orig_beta)  ? BOUND_LOWER
                    :                              BOUND_EXACT;
@@ -452,6 +476,12 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
 
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
     auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(time_limit);
+
+    // Arm the in-search soft deadline (see negascout). Without this, a single
+    // wide subtree could run arbitrarily past the budget because the loop
+    // below only checks the clock between root moves.
+    search_deadline = end_time;
+    search_aborted = false;
 
     // Get the sorted valid moves for the current player
     std::vector<std::pair<int, int>> sorted_moves = get_sorted_moves(player);
@@ -486,7 +516,7 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
         // Try each move at the current depth
         for (const auto& move : sorted_moves) {
             // Check if we've run out of time before starting a new move
-            if (std::chrono::steady_clock::now() >= end_time) {
+            if (search_aborted || std::chrono::steady_clock::now() >= end_time) {
                 // If we have, then we did not complete the depth
                 completed_depth = false;
                 break;
@@ -513,22 +543,28 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
             best_depth = current_depth;
             best_score = current_best_score;
             best_move = current_best_move;
-
-            // Try this depth's best move first at the next (deeper) iteration —
-            // a strong ordering guess that also gets a real TT-move hint once
-            // negascout re-visits the root position at the new depth.
-            auto it = std::find(sorted_moves.begin(), sorted_moves.end(), current_best_move);
-            if (it != sorted_moves.end() && it != sorted_moves.begin()) {
-                std::iter_swap(sorted_moves.begin(), it);
-            }
         } else {
             // If we didn't complete the depth, we ran out of time
             break;
         }
 
+        // Try this depth's best move first at the next (deeper) iteration —
+        // a strong ordering guess that also gets a real TT-move hint once
+        // negascout re-visits the root position at the new depth.
+        auto it = std::find(sorted_moves.begin(), sorted_moves.end(), best_move);
+        if (it != sorted_moves.end() && it != sorted_moves.begin()) {
+            std::iter_swap(sorted_moves.begin(), it);
+        }
+
         // Increment depth for next iteration
         current_depth++;
     }
+
+    // Disarm the deadline so a later fixed-depth benchmark search (or any
+    // other caller of negascout outside predict_move) is never aborted by a
+    // stale clock from this call.
+    search_deadline = {};
+    search_aborted = false;
 
     out_score = best_score;
     out_depth = best_depth;
