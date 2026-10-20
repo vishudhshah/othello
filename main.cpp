@@ -130,6 +130,17 @@ static int run_headless(int argc, char** argv) {
             return false;
         }
     };
+    // Time is parsed as integer seconds, so a fractional value like 0.9
+    // truncates to 0 and predict_move's IDDFS loop never runs (it returned
+    // SCORE -2147483648 / DEPTH 0). Reject anything below 1s up front.
+    auto get_time_limit = [&](int& out) -> bool {
+        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), out)) return false;
+        if (out < 1) {
+            printf("ERROR --time must be at least 1 second (got %d)\n", out);
+            return false;
+        }
+        return true;
+    };
 
     if (has_flag("--book-dump")) {
         string path = get_val("--book-dump", "openings.txt");
@@ -171,7 +182,7 @@ static int run_headless(int argc, char** argv) {
 
     if (has_flag("--selfplay")) {
         int time_limit;
-        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
+        if (!get_time_limit(time_limit)) return 1;
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
         string pl = get_val("--player", "B");
         char current_player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
@@ -233,7 +244,7 @@ static int run_headless(int argc, char** argv) {
         }
 
         int time_limit;
-        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
+        if (!get_time_limit(time_limit)) return 1;
         int score, out_depth;
         pair<int, int> mv = predict_move(player, time_limit, score, out_depth);
         printf("MOVE %c%d SCORE %d DEPTH %d NODES %llu\n",
