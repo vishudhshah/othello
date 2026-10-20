@@ -490,6 +490,12 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
     // Deliberately report score 0: a static evaluation would be misleading
     // when no search was performed for this forced move.
     if (sorted_moves.size() == 1) {
+        // Disarm the deadline here too: this path skips the normal disarm at
+        // the end of the IDDFS loop, and a stale armed deadline could abort
+        // an unrelated later search (e.g. a fixed-depth benchmark) that runs
+        // after this clock time.
+        search_deadline = {};
+        search_aborted = false;
         out_score = 0;
         out_depth = 0;
         return sorted_moves[0];
