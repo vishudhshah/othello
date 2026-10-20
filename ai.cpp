@@ -235,7 +235,11 @@ int evaluate_board(char player, int phase) {
          + w.frontier * frontier;
 }
 
-std::vector<std::pair<int, int>> get_sorted_moves(char player) {
+// Legal moves for `player` in static square-priority order (corners first,
+// X-squares last). Fills `out` and returns the count. Runs once per search
+// node, so it deliberately avoids heap allocation: a fresh vector here cost
+// one malloc per node (~2-3M/sec during a real search).
+int get_sorted_moves(char player, std::pair<int, int>* out) {
     // Define order to check for valid moves
     static const std::vector<std::pair<int, int>> order = {
         // Corners
@@ -263,25 +267,23 @@ std::vector<std::pair<int, int>> get_sorted_moves(char player) {
         {1,1}, {1,6}, {6,1}, {6,6},
     };
 
-    // Compute the legal-move bitmask once and bit-test it 64 times, instead
-    // of calling is_valid_move() up to 64 times — each of those calls would
-    // independently recompute this same bitmask from scratch even though
-    // the board doesn't change between checks. get_sorted_moves() runs once
-    // per search node, so this redundant recomputation would otherwise
-    // happen millions of times per second during a real search.
+    // Compute the legal-move bitmask once and bit-test it in square-priority
+    // order, instead of calling is_valid_move() up to 64 times — each of
+    // those calls would independently recompute this same bitmask from
+    // scratch even though the board doesn't change between checks.
     uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
     uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
     uint64_t moves_bb = bb_get_moves(player_bb, opp_bb);
 
-    std::vector<std::pair<int, int>> valid_moves;
+    int count = 0;
     for (const auto& move : order) {
         int sq = move.first * BOARD_SIZE + move.second;
         if ((moves_bb >> sq) & 1ULL) {
-            valid_moves.push_back(move);
+            out[count++] = move;
         }
     }
 
-    return valid_moves;
+    return count;
 }
 
 int negascout(int depth, int alpha, int beta, char player) {
@@ -331,10 +333,12 @@ int negascout(int depth, int alpha, int beta, char player) {
     int best_score = std::numeric_limits<int>::min();
 
     // Get the sorted valid moves for the current player
-    std::vector<std::pair<int, int>> sorted_moves = get_sorted_moves(player);
+    std::pair<int, int> sorted_moves[MAX_MOVES];
+    int sorted_count = get_sorted_moves(player, sorted_moves);
+    std::pair<int, int>* moves_end = sorted_moves + sorted_count;
 
     // If no valid moves were found, pass the turn to the opponent
-    if (sorted_moves.empty()) {
+    if (sorted_count == 0) {
         return -negascout(depth, -beta, -alpha, opponent);
     }
 
@@ -370,9 +374,9 @@ int negascout(int depth, int alpha, int beta, char player) {
     // depth, where it's just a good guess rather than a reusable score) —
     // this is usually the single biggest lever for alpha-beta cutoff rate.
     if (tt_move.first >= 0) {
-        auto it = std::find(sorted_moves.begin(), sorted_moves.end(), tt_move);
-        if (it != sorted_moves.end()) {
-            std::iter_swap(sorted_moves.begin(), it);
+        auto it = std::find(sorted_moves, moves_end, tt_move);
+        if (it != moves_end) {
+            std::iter_swap(sorted_moves, it);
         }
     }
 
@@ -383,9 +387,9 @@ int negascout(int depth, int alpha, int beta, char player) {
     if (depth >= 0 && depth < MAX_KILLER_DEPTH) {
         for (auto& killer : g_killers[depth]) {
             if (killer.first < 0 || killer == tt_move) continue;
-            auto it = std::find(sorted_moves.begin() + ordered_upto, sorted_moves.end(), killer);
-            if (it != sorted_moves.end()) {
-                std::iter_swap(sorted_moves.begin() + ordered_upto, it);
+            auto it = std::find(sorted_moves + ordered_upto, moves_end, killer);
+            if (it != moves_end) {
+                std::iter_swap(sorted_moves + ordered_upto, it);
                 ordered_upto++;
             }
         }
@@ -394,9 +398,9 @@ int negascout(int depth, int alpha, int beta, char player) {
     // Everything else: stable-sort by history-heuristic score (descending),
     // falling back to the existing static square-priority order for ties —
     // a smoother, whole-list-covering signal beyond just the top 2 killers.
-    if (ordered_upto < (int)sorted_moves.size()) {
+    if (ordered_upto < sorted_count) {
         int player_idx = (player == PLAYER1) ? 0 : 1;
-        std::stable_sort(sorted_moves.begin() + ordered_upto, sorted_moves.end(),
+        std::stable_sort(sorted_moves + ordered_upto, moves_end,
             [player_idx](const std::pair<int, int>& a, const std::pair<int, int>& b) {
                 return g_history[player_idx][a.first * BOARD_SIZE + a.second]
                      > g_history[player_idx][b.first * BOARD_SIZE + b.second];
@@ -406,7 +410,7 @@ int negascout(int depth, int alpha, int beta, char player) {
     std::pair<int, int> best_move_found = sorted_moves[0];
 
     // Iterate through all sorted (valid) moves
-    for (int idx = 0; idx < (int)sorted_moves.size(); idx++) {
+    for (int idx = 0; idx < sorted_count; idx++) {
         int i = sorted_moves[idx].first;
         int j = sorted_moves[idx].second;
 
@@ -484,12 +488,14 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
     search_aborted = false;
 
     // Get the sorted valid moves for the current player
-    std::vector<std::pair<int, int>> sorted_moves = get_sorted_moves(player);
+    std::pair<int, int> sorted_moves[MAX_MOVES];
+    int sorted_count = get_sorted_moves(player, sorted_moves);
+    std::pair<int, int>* moves_end = sorted_moves + sorted_count;
 
     // If there's only one valid move, return it immediately (no search).
     // Deliberately report score 0: a static evaluation would be misleading
     // when no search was performed for this forced move.
-    if (sorted_moves.size() == 1) {
+    if (sorted_count == 1) {
         // Disarm the deadline here too: this path skips the normal disarm at
         // the end of the IDDFS loop, and a stale armed deadline could abort
         // an unrelated later search (e.g. a fixed-depth benchmark) that runs
@@ -519,8 +525,11 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
         // Initialize a flag to check if all moves were explored at current depth
         bool completed_depth = true;
 
-        // Try each move at the current depth
-        for (const auto& move : sorted_moves) {
+        // Try each move at the current depth (only the first sorted_count
+        // entries are real moves — the array is a fixed 64-slot buffer).
+        for (int idx = 0; idx < sorted_count; idx++) {
+            const auto& move = sorted_moves[idx];
+
             // Check if we've run out of time before starting a new move
             if (search_aborted || std::chrono::steady_clock::now() >= end_time) {
                 // If we have, then we did not complete the depth
@@ -571,9 +580,9 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
         // Try this depth's best move first at the next (deeper) iteration —
         // a strong ordering guess that also gets a real TT-move hint once
         // negascout re-visits the root position at the new depth.
-        auto it = std::find(sorted_moves.begin(), sorted_moves.end(), best_move);
-        if (it != sorted_moves.end() && it != sorted_moves.begin()) {
-            std::iter_swap(sorted_moves.begin(), it);
+        auto it = std::find(sorted_moves, moves_end, best_move);
+        if (it != moves_end && it != sorted_moves) {
+            std::iter_swap(sorted_moves, it);
         }
 
         // Increment depth for next iteration

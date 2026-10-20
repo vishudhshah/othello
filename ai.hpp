@@ -20,8 +20,20 @@ extern uint64_t node_count;
 extern std::chrono::steady_clock::time_point search_deadline;
 extern bool search_aborted;
 
+// Upper bound on legal moves for one player: each legal move occupies a
+// distinct empty square, so the count can never exceed 64 (one per board
+// square). Positions with >24 legal moves genuinely occur at shallow search
+// nodes with many empties — a 24 cap caused a stack-buffer-overflow caught
+// by AddressSanitizer (fixed-depth 12, midgame FEN). 64 is the only safe
+// static bound; the array costs 512B of stack per search frame.
+constexpr int MAX_MOVES = 64;
+
 int game_phase();
 int evaluate_board(char player, int phase);
-std::vector<std::pair<int, int>> get_sorted_moves(char player);
+
+// Fills `out` (capacity >= MAX_MOVES) with the player's legal moves in
+// square-priority order and returns the count. Zero allocation per call:
+// runs once per search node.
+int get_sorted_moves(char player, std::pair<int, int>* out);
 int negascout(int depth, int alpha, int beta, char player);
 std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth);

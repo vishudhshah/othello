@@ -83,10 +83,18 @@ static bool load_headless_position(const string& fen, const string& s64) {
 // time-boxed search can legitimately reach a different depth run-to-run.
 static pair<int, int> search_fixed_depth(char player, int depth, int& out_score) {
     char opponent = get_opponent(player);
-    vector<pair<int, int>> moves = get_sorted_moves(player);
+    pair<int, int> moves[MAX_MOVES];
+    int move_count = get_sorted_moves(player, moves);
+    if (move_count == 0) {
+        // Unreachable via the --search CLI path (guarded there), but a
+        // defensive guard keeps this helper safe for any future caller.
+        out_score = numeric_limits<int>::min();
+        return {-1, -1};
+    }
     pair<int, int> best_move = moves[0];
     int best_score = numeric_limits<int>::min();
-    for (auto& mv : moves) {
+    for (int idx = 0; idx < move_count; idx++) {
+        const auto& mv = moves[idx];
         MoveUndo undo = make_move_undoable(mv.first, mv.second, player);
         int score = -negascout(depth - 1, numeric_limits<int>::min() + 1, numeric_limits<int>::max(), opponent);
         unmake_move(undo);
