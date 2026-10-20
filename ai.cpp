@@ -160,21 +160,25 @@ static int dynamic_danger_correction(char piece_player) {
 }
 
 static int count_frontier_discs(char player) {
-    static const int dirs[8][2] = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}};
-    int count = 0;
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (cell_at(i, j) != player) continue;
-            for (auto& d : dirs) {
-                int ni = i + d[0], nj = j + d[1];
-                if (ni >= 0 && ni < BOARD_SIZE && nj >= 0 && nj < BOARD_SIZE && cell_at(ni, nj) == EMPTY) {
-                    count++;
-                    break;
-                }
-            }
-        }
-    }
-    return count;
+    // A disc is a frontier disc iff at least one of its 8 neighbors is empty.
+    // Shift the empties bitboard one step in each direction (masked to prevent
+    // row wraparound) and union: the result marks every square adjacent to an
+    // empty. One AND with the player's bitboard + popcount gives the answer,
+    // replacing the old 64-cell x 8-neighbor scan.
+    uint64_t empty = ~(black_bb | white_bb);
+    constexpr uint64_t NOT_A = 0xfefefefefefefefeULL; // ~col 0
+    constexpr uint64_t NOT_H = 0x7f7f7f7f7f7f7f7fULL; // ~col 7
+    uint64_t adjacent = 0;
+    adjacent |= empty >> 8;             // below an empty
+    adjacent |= empty << 8;             // above an empty
+    adjacent |= (empty & NOT_H) >> 1;   // right of an empty
+    adjacent |= (empty & NOT_A) << 1;   // left of an empty
+    adjacent |= (empty & NOT_H) >> 9;   // down-right
+    adjacent |= (empty & NOT_A) >> 7;   // down-left
+    adjacent |= (empty & NOT_H) << 7;   // up-right
+    adjacent |= (empty & NOT_A) << 9;   // up-left
+    uint64_t discs = (player == PLAYER1) ? black_bb : white_bb;
+    return __builtin_popcountll(discs & adjacent);
 }
 
 int evaluate_board(char player, int phase) {
@@ -197,16 +201,42 @@ int evaluate_board(char player, int phase) {
     int player_moves = __builtin_popcountll(bb_get_moves(player_bb, opp_bb));
     int opponent_moves = __builtin_popcountll(bb_get_moves(opp_bb, player_bb));
 
-    // Position weights
+    // Position weights: instead of scanning all 64 cells, popcount each
+    // disc color's bitboard against a precomputed mask per distinct weight
+    // value. The weights tables have few distinct values (5 in
+    // POSITION_WEIGHTS, 4 in ENDGAME_WEIGHTS), so this is ~9 popcounts vs a
+    // 64-cell branchy scan.
     int player1_pos = 0, player2_pos = 0;
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            char c = cell_at(i, j);
-            if (c == PLAYER1) {
-                player1_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
-            } else if (c == PLAYER2) {
-                player2_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
-            }
+    {
+        // (weight, mask) pairs for the phase's table, built once on first use
+        static const std::vector<std::pair<int, uint64_t>> pos_masks = [] {
+            std::vector<std::pair<int, uint64_t>> m;
+            for (int i = 0; i < BOARD_SIZE; i++)
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    int w = POSITION_WEIGHTS[i][j];
+                    auto it = std::find_if(m.begin(), m.end(),
+                        [w](const auto& p) { return p.first == w; });
+                    if (it != m.end()) it->second |= 1ULL << (i * BOARD_SIZE + j);
+                    else m.emplace_back(w, 1ULL << (i * BOARD_SIZE + j));
+                }
+            return m;
+        }();
+        static const std::vector<std::pair<int, uint64_t>> end_masks = [] {
+            std::vector<std::pair<int, uint64_t>> m;
+            for (int i = 0; i < BOARD_SIZE; i++)
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    int w = ENDGAME_WEIGHTS[i][j];
+                    auto it = std::find_if(m.begin(), m.end(),
+                        [w](const auto& p) { return p.first == w; });
+                    if (it != m.end()) it->second |= 1ULL << (i * BOARD_SIZE + j);
+                    else m.emplace_back(w, 1ULL << (i * BOARD_SIZE + j));
+                }
+            return m;
+        }();
+        const auto& masks = (phase <= 2) ? pos_masks : end_masks;
+        for (const auto& [weight, mask] : masks) {
+            player1_pos += weight * __builtin_popcountll(black_bb & mask);
+            player2_pos += weight * __builtin_popcountll(white_bb & mask);
         }
     }
 
