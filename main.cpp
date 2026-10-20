@@ -198,6 +198,21 @@ static int run_headless(int argc, char** argv) {
         string pl = get_val("--player", "B");
         char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
 
+        // A position where the side to move has no legal moves (game already
+        // over, or only the opponent can move) is valid input but has nothing
+        // to search — both search drivers assume at least one root move.
+        // Exit gracefully instead of dereferencing an empty move list (the
+        // pre-fix behavior was a segfault in search_fixed_depth) or reporting
+        // an uninitialized sentinel score from predict_move.
+        if (is_game_over()) {
+            printf("ERROR game is already over at this position\n");
+            return 1;
+        }
+        if (turn_skip(player)) {
+            printf("ERROR %s has no legal moves at this position (opponent does)\n", player_name(player).c_str());
+            return 1;
+        }
+
         if (has_flag("--fixed-depth")) {
             int depth;
             if (!get_int("--fixed-depth", "1", depth)) return 1;
