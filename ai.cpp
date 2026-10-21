@@ -193,12 +193,12 @@ static int count_frontier_discs(char player) {
     uint64_t adjacent = 0;
     adjacent |= empty >> 8;             // below an empty
     adjacent |= empty << 8;             // above an empty
-    adjacent |= (empty & NOT_H) >> 1;   // right of an empty
-    adjacent |= (empty & NOT_A) << 1;   // left of an empty
-    adjacent |= (empty & NOT_H) >> 9;   // down-right
-    adjacent |= (empty & NOT_A) >> 7;   // down-left
-    adjacent |= (empty & NOT_H) << 7;   // up-right
-    adjacent |= (empty & NOT_A) << 9;   // up-left
+    adjacent |= (empty & NOT_A) >> 1;   // right of an empty (source not on col H)
+    adjacent |= (empty & NOT_H) << 1;   // left of an empty (source not on col A)
+    adjacent |= (empty & NOT_A) >> 9;   // down-right
+    adjacent |= (empty & NOT_H) >> 7;   // down-left
+    adjacent |= (empty & NOT_A) << 7;   // up-right
+    adjacent |= (empty & NOT_H) << 9;   // up-left
     uint64_t discs = (player == PLAYER1) ? black_bb : white_bb;
     return __builtin_popcountll(discs & adjacent);
 }
@@ -409,6 +409,7 @@ int negascout(int depth, int alpha, int beta, char player) {
     if (entry) {
         int e_score, e_depth; uint8_t e_bound;
         tt_unpack(entry, e_score, e_depth, e_bound, tt_move);
+        delete entry; // probe result is a heap snapshot; unpack copies it out
         if (e_depth >= depth) {
             if (e_bound == BOUND_EXACT) {
                 return e_score;
@@ -448,16 +449,26 @@ int negascout(int depth, int alpha, int beta, char player) {
         }
     }
 
-    // Everything else: stable-sort by history-heuristic score (descending),
-    // falling back to the existing static square-priority order for ties —
-    // a smoother, whole-list-covering signal beyond just the top 2 killers.
+    // Everything else: sort by history-heuristic score (descending), falling
+    // back to the existing static square-priority order for ties (insertion
+    // sort is stable) — a smoother, whole-list-covering signal beyond just
+    // the top 2 killers. Insertion sort, not std::stable_sort: n is at most
+    // 64, insertion is faster at this size, and stable_sort allocates a
+    // temporary buffer on every call (one malloc per search node).
     if (ordered_upto < sorted_count) {
         int player_idx = (player == PLAYER1) ? 0 : 1;
-        std::stable_sort(sorted_moves + ordered_upto, moves_end,
-            [player_idx](const std::pair<int, int>& a, const std::pair<int, int>& b) {
-                return g_history[player_idx][a.first * BOARD_SIZE + a.second]
-                     > g_history[player_idx][b.first * BOARD_SIZE + b.second];
-            });
+        auto key = [player_idx](const std::pair<int, int>& m) {
+            return g_history[player_idx][m.first * BOARD_SIZE + m.second];
+        };
+        for (std::pair<int, int>* i = sorted_moves + ordered_upto + 1; i != moves_end; ++i) {
+            std::pair<int, int> v = *i;
+            std::pair<int, int>* j = i;
+            while (j != sorted_moves + ordered_upto && key(v) > key(*(j - 1))) {
+                *j = *(j - 1);
+                --j;
+            }
+            *j = v;
+        }
     }
 
     std::pair<int, int> best_move_found = sorted_moves[0];
@@ -572,6 +583,14 @@ static void smp_worker(char player,
             int score = -negascout(current_depth - 1, std::numeric_limits<int>::min() + 1,
                                    std::numeric_limits<int>::max(), opponent);
             unmake_move(undo);
+            // The deadline can fire inside the LAST root move's subtree: the
+            // for loop then ends without revisiting the pre-move check, which
+            // would publish an aborted (garbage-scored) iteration as complete.
+            // Re-check after every child before using its score.
+            if (search_aborted) {
+                completed_depth = false;
+                break;
+            }
             if (score > current_best_score) {
                 current_best_move = move;
                 current_best_score = score;
@@ -603,6 +622,11 @@ static void smp_worker(char player,
 }
 
 std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
+    // Instant paths below (book / forced move) return before any search
+    // runs; zero the counter here so they report 0 nodes for THIS turn
+    // instead of the previous searched turn's count.
+    node_count = 0;
+
     // Opening book probe. Keyed by canonical (symmetry-normalized) position,
     // so this also naturally never fires on an arbitrary puzzle-mode start
     // position (no explicit puzzle-mode flag needed): the book only

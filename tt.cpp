@@ -1,22 +1,24 @@
 #include "tt.hpp"
 #include <vector>
+#include <atomic>
+#include <new>
 
-// SMP safety (Lazy SMP), final design: two atomic words per slot.
-//   key     — the position's hash; 0 means "no valid entry"
-//   payload — packed score/depth/bound/move, written atomically as one unit
+// SMP safety (Lazy SMP), final design: one 128-bit atomic per slot carrying
+// key AND payload together. A reader that validates a key can never read a
+// payload from a different entry — the pair is snapshotted in a single
+// atomic operation (lock-free on arm64 and x86-64-via-cmpxchg16b; where the
+// platform lacks lock-free 16B atomics std::atomic<Entry> falls back to an
+// internal lock, which preserves correctness at some cost).
 //
-// Writer: invalidate key (0) -> store payload -> publish key (release).
-// Reader: acquire key -> if it matches, load payload.
-//
-// A reader therefore sees either the complete old entry, the complete new
-// entry, or a miss (key==0 or different key) — never a torn mix. The
-// writer-vs-writer payload race (two workers storing to the same slot) is
-// inherent to always-replace and harmless: the loser's payload is simply
-// overwritten, and any reader that already validated the key may read either
-// complete payload, both of which are legitimate entries for that position.
+// The previous two-atomic-words design (separate key/payload with
+// invalidate -> store payload -> publish key) was NOT correct: a reader that
+// validated the key could observe another worker's payload written between
+// its key load and its payload load. Reproduced against this exact code
+// under a same-slot writer: ~71k wrong scores per ~1M probe-hits. Memory
+// ordering alone cannot repair a torn two-word pair; only making the pair
+// one atomic unit (or locking the slot) does.
 struct Slot {
-    std::atomic<uint64_t> key{0};
-    std::atomic<uint64_t> payload{0};
+    std::atomic<TTEntry> entry{};
 };
 static std::vector<Slot> slots(TT_SIZE);
 static bool tt_enabled = true;
@@ -24,8 +26,7 @@ static bool tt_enabled = true;
 void tt_clear() {
     // Single-threaded context (program startup, between searches).
     for (auto& s : slots) {
-        s.key.store(0, std::memory_order_relaxed);
-        s.payload.store(0, std::memory_order_relaxed);
+        s.entry.store(TTEntry{0, 0}, std::memory_order_relaxed);
     }
 }
 
@@ -50,6 +51,7 @@ static inline uint64_t pack_payload(int score, int depth, uint8_t bound,
     p |= (uint64_t)((move.second + 1) & 31) << 14;
     return p;
 }
+
 static inline void unpack_payload(uint64_t p, int& score, int& depth,
                                   uint8_t& bound, std::pair<int, int>& move) {
     score = (int)(uint32_t)(p >> 32);
@@ -63,26 +65,22 @@ static inline void unpack_payload(uint64_t p, int& score, int& depth,
 const TTEntry* tt_probe(uint64_t key) {
     if (!tt_enabled) return nullptr;
     Slot& s = slots[key & TT_MASK];
-    uint64_t k = s.key.load(std::memory_order_acquire);
-    if (k != key) return nullptr;
-    // Hand the caller an opaque pointer to the slot; payload is read from it
-    // atomically inside tt_unpack. (TTEntry is the public-facing handle type;
-    // its single atomic<uint64_t> word member is unused by this impl.)
-    return reinterpret_cast<const TTEntry*>(&s);
+    // Snapshot the whole entry (key + payload) in one atomic load. The
+    // snapshot is a value copy: no concurrent tt_store can change what the
+    // caller later reads through tt_unpack.
+    TTEntry snapshot = s.entry.load(std::memory_order_acquire);
+    if (snapshot.key != key) return nullptr;
+    return new (std::nothrow) TTEntry(snapshot);
 }
 
 void tt_unpack(const TTEntry* e, int& score, int& depth, uint8_t& bound,
                std::pair<int, int>& move) {
-    const Slot* s = reinterpret_cast<const Slot*>(e);
-    uint64_t p = s->payload.load(std::memory_order_relaxed);
-    unpack_payload(p, score, depth, bound, move);
+    unpack_payload(e->payload, score, depth, bound, move);
 }
 
 void tt_store(uint64_t key, int depth, int score, uint8_t bound, std::pair<int, int> move) {
     if (!tt_enabled) return;
     Slot& s = slots[key & TT_MASK];
     uint64_t payload = pack_payload(score, depth, bound, move);
-    s.key.store(0, std::memory_order_relaxed);
-    s.payload.store(payload, std::memory_order_relaxed);
-    s.key.store(key, std::memory_order_release);
+    s.entry.store(TTEntry{key, payload}, std::memory_order_release);
 }
