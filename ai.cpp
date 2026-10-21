@@ -7,13 +7,28 @@
 #include <limits>
 #include <algorithm>
 
-uint64_t node_count = 0;
+uint64_t thread_local node_count = 0;
 
 // Soft deadline + abort flag for time-boxed searches (see ai.hpp). Default
 // state = no deadline, never aborted, so fixed-depth benchmark searches are
 // completely unaffected.
-std::chrono::steady_clock::time_point search_deadline{};
-bool search_aborted = false;
+//
+// SMP: search_deadline is written once by predict_move before workers spawn
+// and never mutated during the search, so workers can read it without a lock.
+// search_aborted is per-thread (thread_local): each worker aborts and unwinds
+// its own stack independently.
+thread_local std::chrono::steady_clock::time_point search_deadline{};
+thread_local bool search_aborted = false;
+
+// --- Lazy SMP configuration ---
+// Number of search threads the next predict_move() should use. 1 = plain
+// single-threaded search on the calling thread (the historical behavior, and
+// the default until --threads is parsed). Set from main.cpp's --threads flag;
+// capped at MAX_SEARCH_THREADS.
+int search_threads = 1;
+// Generous upper bound: hardware with more cores than this would need a
+// different engine design anyway. predict_move clamps the actual count.
+constexpr int MAX_SEARCH_THREADS = 16;
 
 // Killer-move and history-heuristic move ordering. Neither changes the
 // search's result (negascout still explores the same set of moves, alpha-
@@ -31,11 +46,14 @@ bool search_aborted = false;
 // by remaining depth rather than ply-from-root — the simpler, still
 // effective convention).
 constexpr int MAX_KILLER_DEPTH = 64;
-static std::pair<int, int> g_killers[MAX_KILLER_DEPTH][2];
+static thread_local std::pair<int, int> g_killers[MAX_KILLER_DEPTH][2];
 
 // History: score per (player, destination square), incremented on a beta
 // cutoff weighted by depth*depth (deeper cutoffs are stronger signals).
-static int g_history[2][BOARD_SIZE * BOARD_SIZE];
+// thread_local for Lazy SMP: ordering heuristics are per-thread "what's been
+// working in my search" state; sharing them across racing threads would only
+// add contention for no quality gain.
+static thread_local int g_history[2][BOARD_SIZE * BOARD_SIZE];
 
 static void reset_move_ordering_heuristics() {
     for (auto& slot : g_killers) slot[0] = slot[1] = {-1, -1};

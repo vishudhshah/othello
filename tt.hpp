@@ -36,4 +36,12 @@ void tt_set_enabled(bool enabled);
 // (hash-index collision) — callers must not assume a non-null result means
 // an exact match at the requested depth, only that it's this position.
 const TTEntry* tt_probe(uint64_t key);
+
+// Store into the slot keyed by `key` (always-replace). SMP-safe: the entry is
+// all-POD and probed by full-key match, so a torn multi-threaded write can
+// only ever produce a slot whose key doesn't match any real position (probe
+// returns nullptr for it) — the standard lock-free Lazy SMP TT pattern. A
+// torn read that *passes* the key check still cannot corrupt the search:
+// depth-gated, bound-checked reuse bounds any garbage score's influence, and
+// re-searches overwrite the slot.
 void tt_store(uint64_t key, int depth, int score, uint8_t bound, std::pair<int, int> move);
