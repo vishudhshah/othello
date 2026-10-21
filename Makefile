@@ -13,6 +13,15 @@ endif
 CXXFLAGS += -I$(NCURSES_PREFIX)/include
 LDFLAGS := -L$(NCURSES_PREFIX)/lib -lncursesw
 
+# 128-bit atomic capability probe (TT slots are std::atomic<TTEntry>, 16B).
+# GCC/Linux lowers those to __atomic_load_16/__atomic_store_16 in libatomic
+# when not lock-free at compile time; clang/macOS has them inline. Probe the
+# link: if the bare link fails, link the atomic runtime.
+ATOMIC_PROBE := $(shell printf 'struct S{unsigned long long a,b;};\nint main(){volatile S s{}; S r; __atomic_load((const S*)&s, &r, 5); return (int)r.a;}\n' > .atomic_probe.cpp && $(CXX) -std=c++20 .atomic_probe.cpp -o .atomic_probe 2>/dev/null && echo yes || echo no; rm -f .atomic_probe.cpp .atomic_probe)
+ifeq ($(ATOMIC_PROBE),no)
+LDFLAGS += -latomic
+endif
+
 # Create a build directory for .o and .d files
 BUILD_DIR = build
 OBJ = $(addprefix $(BUILD_DIR)/, $(SRC:.cpp=.o))
