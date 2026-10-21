@@ -1,8 +1,8 @@
 #include "constants.hpp"
 
-uint64_t black_bb = 0;
-uint64_t white_bb = 0;
-std::pair<int,int> last_move = {-1, -1};
+uint64_t thread_local black_bb = 0;
+uint64_t thread_local white_bb = 0;
+std::pair<int,int> thread_local last_move = {-1, -1};
 
 // Weighted piece counter for the evaluation function
 const int POSITION_WEIGHTS[BOARD_SIZE][BOARD_SIZE] = {
