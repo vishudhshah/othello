@@ -130,6 +130,17 @@ static int run_headless(int argc, char** argv) {
             return false;
         }
     };
+    // Lazy SMP thread count for any AI search this run performs (headless or
+    // interactive). Default 4 (user decision). --threads 1 is the escape
+    // hatch back to the verified single-threaded search. Parsed here, before
+    // any mode dispatch, so the interactive game gets the same default as
+    // the headless paths. Clamped to a sane range; predict_move further
+    // caps by hardware.
+    if (has_flag("--threads")) {
+        int nt;
+        if (!get_int("--threads", "4", nt)) return 1;
+        search_threads = nt;
+    }
     // Time is parsed as integer seconds, so a fractional value like 0.9
     // truncates to 0 and predict_move's IDDFS loop never runs (it returned
     // SCORE -2147483648 / DEPTH 0). Reject anything below 1s up front.

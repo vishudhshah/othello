@@ -6,6 +6,9 @@
 #include "book.hpp"
 #include <limits>
 #include <algorithm>
+#include <thread>
+#include <mutex>
+#include <vector>
 
 uint64_t thread_local node_count = 0;
 
@@ -21,11 +24,12 @@ thread_local std::chrono::steady_clock::time_point search_deadline{};
 thread_local bool search_aborted = false;
 
 // --- Lazy SMP configuration ---
-// Number of search threads the next predict_move() should use. 1 = plain
+// Number of search threads the next predict_move() should use. Default 4
+// (user decision): 4 independent IDDFS workers over one shared TT. 1 = plain
 // single-threaded search on the calling thread (the historical behavior, and
-// the default until --threads is parsed). Set from main.cpp's --threads flag;
+// the --threads 1 escape hatch). Set from main.cpp's --threads flag;
 // capped at MAX_SEARCH_THREADS.
-int search_threads = 1;
+int search_threads = 4;
 // Generous upper bound: hardware with more cores than this would need a
 // different engine design anyway. predict_move clamps the actual count.
 constexpr int MAX_SEARCH_THREADS = 16;
@@ -403,17 +407,18 @@ int negascout(int depth, int alpha, int beta, char player) {
 
     const TTEntry* entry = tt_probe(tt_key);
     if (entry) {
-        tt_move = {entry->move_row, entry->move_col};
-        if (entry->depth >= depth) {
-            if (entry->bound == BOUND_EXACT) {
-                return entry->score;
-            } else if (entry->bound == BOUND_LOWER) {
-                alpha = std::max(alpha, entry->score);
-            } else if (entry->bound == BOUND_UPPER) {
-                beta = std::min(beta, entry->score);
+        int e_score, e_depth; uint8_t e_bound;
+        tt_unpack(entry, e_score, e_depth, e_bound, tt_move);
+        if (e_depth >= depth) {
+            if (e_bound == BOUND_EXACT) {
+                return e_score;
+            } else if (e_bound == BOUND_LOWER) {
+                alpha = std::max(alpha, e_score);
+            } else if (e_bound == BOUND_UPPER) {
+                beta = std::min(beta, e_score);
             }
             if (alpha >= beta) {
-                return entry->score;
+                return e_score;
             }
         }
     }
@@ -505,10 +510,99 @@ int negascout(int depth, int alpha, int beta, char player) {
     return best_score;
 }
 
-std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
-    node_count = 0;
-    reset_move_ordering_heuristics();
+// One worker's IDDFS: identical logic to the single-threaded predict_move
+// body (which this function also serves as for nthreads == 1), running on
+// the caller's own board copy (thread_local black_bb/white_bb/current_hash —
+// seeded by the spawner). Results are reported through `out` at completion
+// of each depth; the spawner races workers against each other and picks the
+// best completed iteration available.
+struct SmpResult {
+    std::pair<int, int> move = {-1, -1};
+    int score = std::numeric_limits<int>::min();
+    int depth = 0;
+    uint64_t nodes = 0;
+};
 
+static void smp_worker(char player,
+                       std::chrono::steady_clock::time_point end_time,
+                       uint64_t seed_bb_black, uint64_t seed_bb_white,
+                       uint64_t seed_hash, SmpResult& out) {
+    // Seed this thread's board copy from the spawner's board. For nthreads==1
+    // the spawner passes its own (already-current) values, making these
+    // assignments no-ops.
+    black_bb = seed_bb_black;
+    white_bb = seed_bb_white;
+    current_hash = seed_hash;
+    reset_move_ordering_heuristics();
+    // Per-move node count: zero this thread's counter before searching. For
+    // the nthreads==1 path this thread is the persistent main/UI thread, so
+    // without this the reported count would accumulate across every AI move
+    // of the game instead of counting just this turn's search.
+    node_count = 0;
+
+    char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
+
+    // Arm this thread's soft deadline (thread_local; read-only during search).
+    search_deadline = end_time;
+    search_aborted = false;
+
+    std::pair<int, int> sorted_moves[MAX_MOVES];
+    int sorted_count = get_sorted_moves(player, sorted_moves);
+    std::pair<int, int>* moves_end = sorted_moves + sorted_count;
+
+    SmpResult local;
+    int current_depth = 1;
+    int empty_cells = BOARD_SIZE * BOARD_SIZE - __builtin_popcountll(black_bb | white_bb);
+
+    while (std::chrono::steady_clock::now() < end_time && current_depth <= empty_cells) {
+        std::pair<int, int> current_best_move;
+        int current_best_score = std::numeric_limits<int>::min();
+        bool completed_depth = true;
+
+        for (int idx = 0; idx < sorted_count; idx++) {
+            const auto& move = sorted_moves[idx];
+            if (search_aborted || std::chrono::steady_clock::now() >= end_time) {
+                completed_depth = false;
+                break;
+            }
+            MoveUndo undo = make_move_undoable(move.first, move.second, player);
+            // Depth accounting mirrors the single-threaded driver: the root
+            // move is already made, so remaining depth is current_depth - 1
+            // (timed-mode depth == fixed-depth depth; see commit 1e182ad).
+            int score = -negascout(current_depth - 1, std::numeric_limits<int>::min() + 1,
+                                   std::numeric_limits<int>::max(), opponent);
+            unmake_move(undo);
+            if (score > current_best_score) {
+                current_best_move = move;
+                current_best_score = score;
+            }
+        }
+
+        if (!completed_depth) break;
+
+        // Publish this depth's completed result. Plain struct write: the
+        // spawner reads these only after joining this thread (or after a
+        // mutex-protected handoff), never mid-flight.
+        local.move = current_best_move;
+        local.score = current_best_score;
+        local.depth = current_depth;
+
+        // Iteration-to-iteration best-move-first ordering (same as the
+        // single-threaded driver).
+        auto it = std::find(sorted_moves, moves_end, current_best_move);
+        if (it != moves_end && it != sorted_moves) {
+            std::iter_swap(sorted_moves, it);
+        }
+        current_depth++;
+    }
+
+    search_deadline = {};
+    search_aborted = false;
+    local.nodes = node_count;
+    out = local;
+}
+
+std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
     // Opening book probe. Keyed by canonical (symmetry-normalized) position,
     // so this also naturally never fires on an arbitrary puzzle-mode start
     // position (no explicit puzzle-mode flag needed): the book only
@@ -526,124 +620,80 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
         return book_move;
     }
 
-    char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
+    // Forced single move: no search either way.
+    {
+        std::pair<int, int> probe[MAX_MOVES];
+        int probe_count = get_sorted_moves(player, probe);
+        if (probe_count == 1) {
+            out_score = 0;
+            out_depth = 0;
+            return probe[0];
+        }
+    }
+
+    // Resolve the thread count: main.cpp sets search_threads from --threads;
+    // clamp to something sane for the hardware (leave 2 cores for the OS/UI)
+    // and to the compile-time cap.
+    int nthreads = search_threads;
+    {
+        unsigned hw = std::thread::hardware_concurrency();
+        if (hw >= 4) nthreads = std::min(nthreads, (int)hw - 2);
+        nthreads = std::clamp(nthreads, 1, MAX_SEARCH_THREADS);
+    }
+
     auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(time_limit);
 
-    // Arm the in-search soft deadline (see negascout). Without this, a single
-    // wide subtree could run arbitrarily past the budget because the loop
-    // below only checks the clock between root moves.
-    search_deadline = end_time;
-    search_aborted = false;
-
-    // Get the sorted valid moves for the current player
-    std::pair<int, int> sorted_moves[MAX_MOVES];
-    int sorted_count = get_sorted_moves(player, sorted_moves);
-    std::pair<int, int>* moves_end = sorted_moves + sorted_count;
-
-    // If there's only one valid move, return it immediately (no search).
-    // Deliberately report score 0: a static evaluation would be misleading
-    // when no search was performed for this forced move.
-    if (sorted_count == 1) {
-        // Disarm the deadline here too: this path skips the normal disarm at
-        // the end of the IDDFS loop, and a stale armed deadline could abort
-        // an unrelated later search (e.g. a fixed-depth benchmark) that runs
-        // after this clock time.
-        search_deadline = {};
-        search_aborted = false;
-        out_score = 0;
-        out_depth = 0;
-        return sorted_moves[0];
+    if (nthreads == 1) {
+        // Historical path: search on this thread, board already in place.
+        SmpResult r;
+        smp_worker(player, end_time, black_bb, white_bb, current_hash, r);
+        node_count = 0; // this thread's own count; single-threaded semantics
+        // (smp_worker already reset/accumulated into this thread's
+        // thread_local node_count; report the total through out params below.)
+        uint64_t total = r.nodes;
+        node_count = total; // expose via the same global the CLI prints
+        out_score = r.score;
+        out_depth = r.depth;
+        return r.move;
     }
 
-    // Initialize the best move, best score, and current depth
-    std::pair<int, int> best_move;
-    int best_score = std::numeric_limits<int>::min();
-    int current_depth = 1;
-    int best_depth = 0;
+    // Lazy SMP: nthreads independent IDDFS workers over one shared TT.
+    // Board copies are seeded from the main thread's board BEFORE spawning
+    // (thread_local assignment below runs in the worker, reading seeds
+    // captured here). Each worker races the others; the shared TT makes them
+    // collaborate — a subtree one worker finishes may be a TT hit for
+    // another. Results are collected under a mutex as workers complete each
+    // depth; the best completed depth at deadline wins.
+    std::vector<std::thread> threads;
+    std::vector<SmpResult> results(nthreads);
+    std::mutex results_mutex;
+    uint64_t seed_black = black_bb, seed_white = white_bb, seed_hash = current_hash;
 
-    // Get the number of empty cells on the board
-    int empty_cells = BOARD_SIZE * BOARD_SIZE - __builtin_popcountll(black_bb | white_bb);
-
-    // While time is left and depth is less than the number of empty cells
-    while (std::chrono::steady_clock::now() < end_time && current_depth <= empty_cells) {
-        // Initialize the current best move and score
-        std::pair<int, int> current_best_move;
-        int current_best_score = std::numeric_limits<int>::min();
-
-        // Initialize a flag to check if all moves were explored at current depth
-        bool completed_depth = true;
-
-        // Try each move at the current depth (only the first sorted_count
-        // entries are real moves — the array is a fixed 64-slot buffer).
-        for (int idx = 0; idx < sorted_count; idx++) {
-            const auto& move = sorted_moves[idx];
-
-            // Check if we've run out of time before starting a new move
-            if (search_aborted || std::chrono::steady_clock::now() >= end_time) {
-                // If we have, then we did not complete the depth
-                completed_depth = false;
-                break;
-            }
-
-            // Simulate the move, keeping an undo record instead of copying the board
-            MoveUndo undo = make_move_undoable(move.first, move.second, player);
-
-            // Call negascout to predict the score.
-            //
-            // Depth accounting: the root move is already made, so passing
-            // current_depth - 1 makes the reported "depth" count plies BELOW
-            // the root move — the same convention as --search --fixed-depth
-            // (search_fixed_depth passes depth - 1 after making the root
-            // move). Before this alignment, timed mode's "depth D" silently
-            // meant fixed-depth mode's "depth D+1" (one ply deeper), which
-            // made CSV/log depth numbers incomparable across the two paths.
-            // Same tree is searched as before; only the reported number
-            // changes (D -> D-1).
-            int score = -negascout(current_depth - 1, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
-
-            // Undo the move
-            unmake_move(undo);
-
-            // Update the current best move and score
-            if (score > current_best_score) {
-                current_best_move = move;
-                current_best_score = score;
-            }
-        }
-
-        // Update the best move and score if we explored all moves at this depth
-        if (completed_depth) {
-            // current_depth here counts plies below the root move (the root
-            // move itself is not counted — see the negascout call above), so
-            // reporting it directly keeps timed-mode depth equal to
-            // fixed-depth mode's for the same search.
-            best_depth = current_depth;
-            best_score = current_best_score;
-            best_move = current_best_move;
-        } else {
-            // If we didn't complete the depth, we ran out of time
-            break;
-        }
-
-        // Try this depth's best move first at the next (deeper) iteration —
-        // a strong ordering guess that also gets a real TT-move hint once
-        // negascout re-visits the root position at the new depth.
-        auto it = std::find(sorted_moves, moves_end, best_move);
-        if (it != moves_end && it != sorted_moves) {
-            std::iter_swap(sorted_moves, it);
-        }
-
-        // Increment depth for next iteration
-        current_depth++;
+    for (int t = 0; t < nthreads; t++) {
+        threads.emplace_back([&, t]() {
+            SmpResult local;
+            smp_worker(player, end_time, seed_black, seed_white, seed_hash, local);
+            std::lock_guard<std::mutex> lock(results_mutex);
+            results[t] = local;
+        });
     }
+    for (auto& th : threads) th.join();
 
-    // Disarm the deadline so a later fixed-depth benchmark search (or any
-    // other caller of negascout outside predict_move) is never aborted by a
-    // stale clock from this call.
-    search_deadline = {};
-    search_aborted = false;
+    // Pick the deepest completed iteration across workers (all workers ran
+    // the same IDDFS schedule, so depth is comparable; among equal depths
+    // any worker's result is valid — they differ only in ordering luck).
+    const SmpResult* best = nullptr;
+    uint64_t total_nodes = 0;
+    for (const auto& r : results) {
+        total_nodes += r.nodes;
+        if (!best || r.depth > best->depth ||
+            (r.depth == best->depth && r.score > best->score)) {
+            best = &r;
+        }
+    }
+    node_count = total_nodes;
+    out_score = best->score;
+    out_depth = best->depth;
+    return best->move;
 
-    out_score = best_score;
-    out_depth = best_depth;
-    return best_move;
-} 
+}
