@@ -3,7 +3,7 @@
 
 uint64_t ZOBRIST_TABLE[2][BOARD_SIZE * BOARD_SIZE];
 uint64_t ZOBRIST_TURN;
-uint64_t current_hash = 0;
+uint64_t thread_local current_hash = 0;
 
 void init_zobrist_table() {
     // Fixed seed (not random_device): deterministic hashes make incremental-

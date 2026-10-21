@@ -19,7 +19,10 @@
 
 extern uint64_t ZOBRIST_TABLE[2][BOARD_SIZE * BOARD_SIZE]; // [0]=PLAYER1, [1]=PLAYER2, indexed by row*BOARD_SIZE+col
 extern uint64_t ZOBRIST_TURN;
-extern uint64_t current_hash;
+// thread_local for Lazy SMP: each search worker maintains its own incremental
+// hash for its own board copy (see constants.hpp). Single-threaded behavior
+// is unchanged — the main thread's instance is the same object as before.
+extern thread_local uint64_t current_hash;
 
 // Seeds ZOBRIST_TABLE/ZOBRIST_TURN with a fixed seed (deterministic across
 // runs, so hashes are reproducible for debugging/testing). Call once at

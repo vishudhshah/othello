@@ -83,10 +83,18 @@ static bool load_headless_position(const string& fen, const string& s64) {
 // time-boxed search can legitimately reach a different depth run-to-run.
 static pair<int, int> search_fixed_depth(char player, int depth, int& out_score) {
     char opponent = get_opponent(player);
-    vector<pair<int, int>> moves = get_sorted_moves(player);
+    pair<int, int> moves[MAX_MOVES];
+    int move_count = get_sorted_moves(player, moves);
+    if (move_count == 0) {
+        // Unreachable via the --search CLI path (guarded there), but a
+        // defensive guard keeps this helper safe for any future caller.
+        out_score = numeric_limits<int>::min();
+        return {-1, -1};
+    }
     pair<int, int> best_move = moves[0];
     int best_score = numeric_limits<int>::min();
-    for (auto& mv : moves) {
+    for (int idx = 0; idx < move_count; idx++) {
+        const auto& mv = moves[idx];
         MoveUndo undo = make_move_undoable(mv.first, mv.second, player);
         int score = -negascout(depth - 1, numeric_limits<int>::min() + 1, numeric_limits<int>::max(), opponent);
         unmake_move(undo);
@@ -121,6 +129,28 @@ static int run_headless(int argc, char** argv) {
             printf("ERROR invalid %s\n", f.c_str());
             return false;
         }
+    };
+    // Lazy SMP thread count for any AI search this run performs (headless or
+    // interactive). Default 4 (user decision). --threads 1 is the escape
+    // hatch back to the verified single-threaded search. Parsed here, before
+    // any mode dispatch, so the interactive game gets the same default as
+    // the headless paths. Clamped to a sane range; predict_move further
+    // caps by hardware.
+    if (has_flag("--threads")) {
+        int nt;
+        if (!get_int("--threads", "4", nt)) return 1;
+        search_threads = nt;
+    }
+    // Time is parsed as integer seconds, so a fractional value like 0.9
+    // truncates to 0 and predict_move's IDDFS loop never runs (it returned
+    // SCORE -2147483648 / DEPTH 0). Reject anything below 1s up front.
+    auto get_time_limit = [&](int& out) -> bool {
+        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), out)) return false;
+        if (out < 1) {
+            printf("ERROR --time must be at least 1 second (got %d)\n", out);
+            return false;
+        }
+        return true;
     };
 
     if (has_flag("--book-dump")) {
@@ -163,7 +193,7 @@ static int run_headless(int argc, char** argv) {
 
     if (has_flag("--selfplay")) {
         int time_limit;
-        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
+        if (!get_time_limit(time_limit)) return 1;
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
         string pl = get_val("--player", "B");
         char current_player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
@@ -198,6 +228,21 @@ static int run_headless(int argc, char** argv) {
         string pl = get_val("--player", "B");
         char player = (pl == "W" || pl == "w") ? PLAYER2 : PLAYER1;
 
+        // A position where the side to move has no legal moves (game already
+        // over, or only the opponent can move) is valid input but has nothing
+        // to search — both search drivers assume at least one root move.
+        // Exit gracefully instead of dereferencing an empty move list (the
+        // pre-fix behavior was a segfault in search_fixed_depth) or reporting
+        // an uninitialized sentinel score from predict_move.
+        if (is_game_over()) {
+            printf("ERROR game is already over at this position\n");
+            return 1;
+        }
+        if (turn_skip(player)) {
+            printf("ERROR %s has no legal moves at this position (opponent does)\n", player_name(player).c_str());
+            return 1;
+        }
+
         if (has_flag("--fixed-depth")) {
             int depth;
             if (!get_int("--fixed-depth", "1", depth)) return 1;
@@ -210,7 +255,7 @@ static int run_headless(int argc, char** argv) {
         }
 
         int time_limit;
-        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), time_limit)) return 1;
+        if (!get_time_limit(time_limit)) return 1;
         int score, out_depth;
         pair<int, int> mv = predict_move(player, time_limit, score, out_depth);
         printf("MOVE %c%d SCORE %d DEPTH %d NODES %llu\n",

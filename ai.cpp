@@ -6,8 +6,33 @@
 #include "book.hpp"
 #include <limits>
 #include <algorithm>
+#include <thread>
+#include <mutex>
+#include <vector>
 
-uint64_t node_count = 0;
+uint64_t thread_local node_count = 0;
+
+// Soft deadline + abort flag for time-boxed searches (see ai.hpp). Default
+// state = no deadline, never aborted, so fixed-depth benchmark searches are
+// completely unaffected.
+//
+// SMP: search_deadline is written once by predict_move before workers spawn
+// and never mutated during the search, so workers can read it without a lock.
+// search_aborted is per-thread (thread_local): each worker aborts and unwinds
+// its own stack independently.
+thread_local std::chrono::steady_clock::time_point search_deadline{};
+thread_local bool search_aborted = false;
+
+// --- Lazy SMP configuration ---
+// Number of search threads the next predict_move() should use. Default 4
+// (user decision): 4 independent IDDFS workers over one shared TT. 1 = plain
+// single-threaded search on the calling thread (the historical behavior, and
+// the --threads 1 escape hatch). Set from main.cpp's --threads flag;
+// capped at MAX_SEARCH_THREADS.
+int search_threads = 4;
+// Generous upper bound: hardware with more cores than this would need a
+// different engine design anyway. predict_move clamps the actual count.
+constexpr int MAX_SEARCH_THREADS = 16;
 
 // Killer-move and history-heuristic move ordering. Neither changes the
 // search's result (negascout still explores the same set of moves, alpha-
@@ -25,11 +50,14 @@ uint64_t node_count = 0;
 // by remaining depth rather than ply-from-root — the simpler, still
 // effective convention).
 constexpr int MAX_KILLER_DEPTH = 64;
-static std::pair<int, int> g_killers[MAX_KILLER_DEPTH][2];
+static thread_local std::pair<int, int> g_killers[MAX_KILLER_DEPTH][2];
 
 // History: score per (player, destination square), incremented on a beta
 // cutoff weighted by depth*depth (deeper cutoffs are stronger signals).
-static int g_history[2][BOARD_SIZE * BOARD_SIZE];
+// thread_local for Lazy SMP: ordering heuristics are per-thread "what's been
+// working in my search" state; sharing them across racing threads would only
+// add contention for no quality gain.
+static thread_local int g_history[2][BOARD_SIZE * BOARD_SIZE];
 
 static void reset_move_ordering_heuristics() {
     for (auto& slot : g_killers) slot[0] = slot[1] = {-1, -1};
@@ -154,21 +182,25 @@ static int dynamic_danger_correction(char piece_player) {
 }
 
 static int count_frontier_discs(char player) {
-    static const int dirs[8][2] = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}};
-    int count = 0;
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            if (cell_at(i, j) != player) continue;
-            for (auto& d : dirs) {
-                int ni = i + d[0], nj = j + d[1];
-                if (ni >= 0 && ni < BOARD_SIZE && nj >= 0 && nj < BOARD_SIZE && cell_at(ni, nj) == EMPTY) {
-                    count++;
-                    break;
-                }
-            }
-        }
-    }
-    return count;
+    // A disc is a frontier disc iff at least one of its 8 neighbors is empty.
+    // Shift the empties bitboard one step in each direction (masked to prevent
+    // row wraparound) and union: the result marks every square adjacent to an
+    // empty. One AND with the player's bitboard + popcount gives the answer,
+    // replacing the old 64-cell x 8-neighbor scan.
+    uint64_t empty = ~(black_bb | white_bb);
+    constexpr uint64_t NOT_A = 0xfefefefefefefefeULL; // ~col 0
+    constexpr uint64_t NOT_H = 0x7f7f7f7f7f7f7f7fULL; // ~col 7
+    uint64_t adjacent = 0;
+    adjacent |= empty >> 8;             // below an empty
+    adjacent |= empty << 8;             // above an empty
+    adjacent |= (empty & NOT_A) >> 1;   // right of an empty (source not on col H)
+    adjacent |= (empty & NOT_H) << 1;   // left of an empty (source not on col A)
+    adjacent |= (empty & NOT_A) >> 9;   // down-right
+    adjacent |= (empty & NOT_H) >> 7;   // down-left
+    adjacent |= (empty & NOT_A) << 7;   // up-right
+    adjacent |= (empty & NOT_H) << 9;   // up-left
+    uint64_t discs = (player == PLAYER1) ? black_bb : white_bb;
+    return __builtin_popcountll(discs & adjacent);
 }
 
 int evaluate_board(char player, int phase) {
@@ -191,16 +223,42 @@ int evaluate_board(char player, int phase) {
     int player_moves = __builtin_popcountll(bb_get_moves(player_bb, opp_bb));
     int opponent_moves = __builtin_popcountll(bb_get_moves(opp_bb, player_bb));
 
-    // Position weights
+    // Position weights: instead of scanning all 64 cells, popcount each
+    // disc color's bitboard against a precomputed mask per distinct weight
+    // value. The weights tables have few distinct values (5 in
+    // POSITION_WEIGHTS, 4 in ENDGAME_WEIGHTS), so this is ~9 popcounts vs a
+    // 64-cell branchy scan.
     int player1_pos = 0, player2_pos = 0;
-    for (int i = 0; i < BOARD_SIZE; i++) {
-        for (int j = 0; j < BOARD_SIZE; j++) {
-            char c = cell_at(i, j);
-            if (c == PLAYER1) {
-                player1_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
-            } else if (c == PLAYER2) {
-                player2_pos += (phase <= 2) ? POSITION_WEIGHTS[i][j] : ENDGAME_WEIGHTS[i][j];
-            }
+    {
+        // (weight, mask) pairs for the phase's table, built once on first use
+        static const std::vector<std::pair<int, uint64_t>> pos_masks = [] {
+            std::vector<std::pair<int, uint64_t>> m;
+            for (int i = 0; i < BOARD_SIZE; i++)
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    int w = POSITION_WEIGHTS[i][j];
+                    auto it = std::find_if(m.begin(), m.end(),
+                        [w](const auto& p) { return p.first == w; });
+                    if (it != m.end()) it->second |= 1ULL << (i * BOARD_SIZE + j);
+                    else m.emplace_back(w, 1ULL << (i * BOARD_SIZE + j));
+                }
+            return m;
+        }();
+        static const std::vector<std::pair<int, uint64_t>> end_masks = [] {
+            std::vector<std::pair<int, uint64_t>> m;
+            for (int i = 0; i < BOARD_SIZE; i++)
+                for (int j = 0; j < BOARD_SIZE; j++) {
+                    int w = ENDGAME_WEIGHTS[i][j];
+                    auto it = std::find_if(m.begin(), m.end(),
+                        [w](const auto& p) { return p.first == w; });
+                    if (it != m.end()) it->second |= 1ULL << (i * BOARD_SIZE + j);
+                    else m.emplace_back(w, 1ULL << (i * BOARD_SIZE + j));
+                }
+            return m;
+        }();
+        const auto& masks = (phase <= 2) ? pos_masks : end_masks;
+        for (const auto& [weight, mask] : masks) {
+            player1_pos += weight * __builtin_popcountll(black_bb & mask);
+            player2_pos += weight * __builtin_popcountll(white_bb & mask);
         }
     }
 
@@ -229,7 +287,11 @@ int evaluate_board(char player, int phase) {
          + w.frontier * frontier;
 }
 
-std::vector<std::pair<int, int>> get_sorted_moves(char player) {
+// Legal moves for `player` in static square-priority order (corners first,
+// X-squares last). Fills `out` and returns the count. Runs once per search
+// node, so it deliberately avoids heap allocation: a fresh vector here cost
+// one malloc per node (~2-3M/sec during a real search).
+int get_sorted_moves(char player, std::pair<int, int>* out) {
     // Define order to check for valid moves
     static const std::vector<std::pair<int, int>> order = {
         // Corners
@@ -257,29 +319,40 @@ std::vector<std::pair<int, int>> get_sorted_moves(char player) {
         {1,1}, {1,6}, {6,1}, {6,6},
     };
 
-    // Compute the legal-move bitmask once and bit-test it 64 times, instead
-    // of calling is_valid_move() up to 64 times — each of those calls would
-    // independently recompute this same bitmask from scratch even though
-    // the board doesn't change between checks. get_sorted_moves() runs once
-    // per search node, so this redundant recomputation would otherwise
-    // happen millions of times per second during a real search.
+    // Compute the legal-move bitmask once and bit-test it in square-priority
+    // order, instead of calling is_valid_move() up to 64 times — each of
+    // those calls would independently recompute this same bitmask from
+    // scratch even though the board doesn't change between checks.
     uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
     uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
     uint64_t moves_bb = bb_get_moves(player_bb, opp_bb);
 
-    std::vector<std::pair<int, int>> valid_moves;
+    int count = 0;
     for (const auto& move : order) {
         int sq = move.first * BOARD_SIZE + move.second;
         if ((moves_bb >> sq) & 1ULL) {
-            valid_moves.push_back(move);
+            out[count++] = move;
         }
     }
 
-    return valid_moves;
+    return count;
 }
 
 int negascout(int depth, int alpha, int beta, char player) {
     node_count++;
+
+    // Soft-deadline check: abort the moment the time budget is gone. The flag
+    // unwinds every caller; nothing is written to the TT after it is raised
+    // (see the tt_store guard below), and predict_move() discards the whole
+    // iteration's results, so the abort never leaks a bad score into a move
+    // decision or a benchmark. The check is one clock read per node — cheap
+    // relative to the node's own work.
+    if (search_deadline != std::chrono::steady_clock::time_point{} &&
+        std::chrono::steady_clock::now() >= search_deadline) {
+        search_aborted = true;
+        return 0;
+    }
+
     char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
 
     // Base case: game is over or depth limit reached
@@ -312,10 +385,12 @@ int negascout(int depth, int alpha, int beta, char player) {
     int best_score = std::numeric_limits<int>::min();
 
     // Get the sorted valid moves for the current player
-    std::vector<std::pair<int, int>> sorted_moves = get_sorted_moves(player);
+    std::pair<int, int> sorted_moves[MAX_MOVES];
+    int sorted_count = get_sorted_moves(player, sorted_moves);
+    std::pair<int, int>* moves_end = sorted_moves + sorted_count;
 
     // If no valid moves were found, pass the turn to the opponent
-    if (sorted_moves.empty()) {
+    if (sorted_count == 0) {
         return -negascout(depth, -beta, -alpha, opponent);
     }
 
@@ -330,19 +405,20 @@ int negascout(int depth, int alpha, int beta, char player) {
     uint64_t tt_key = current_hash ^ (player == PLAYER2 ? ZOBRIST_TURN : 0);
     std::pair<int, int> tt_move = {-1, -1};
 
-    const TTEntry* entry = tt_probe(tt_key);
-    if (entry) {
-        tt_move = {entry->move_row, entry->move_col};
-        if (entry->depth >= depth) {
-            if (entry->bound == BOUND_EXACT) {
-                return entry->score;
-            } else if (entry->bound == BOUND_LOWER) {
-                alpha = std::max(alpha, entry->score);
-            } else if (entry->bound == BOUND_UPPER) {
-                beta = std::min(beta, entry->score);
+    TTEntry entry;
+    if (tt_probe(tt_key, &entry)) {
+        int e_score, e_depth; uint8_t e_bound;
+        tt_unpack(&entry, e_score, e_depth, e_bound, tt_move);
+        if (e_depth >= depth) {
+            if (e_bound == BOUND_EXACT) {
+                return e_score;
+            } else if (e_bound == BOUND_LOWER) {
+                alpha = std::max(alpha, e_score);
+            } else if (e_bound == BOUND_UPPER) {
+                beta = std::min(beta, e_score);
             }
             if (alpha >= beta) {
-                return entry->score;
+                return e_score;
             }
         }
     }
@@ -351,9 +427,9 @@ int negascout(int depth, int alpha, int beta, char player) {
     // depth, where it's just a good guess rather than a reusable score) —
     // this is usually the single biggest lever for alpha-beta cutoff rate.
     if (tt_move.first >= 0) {
-        auto it = std::find(sorted_moves.begin(), sorted_moves.end(), tt_move);
-        if (it != sorted_moves.end()) {
-            std::iter_swap(sorted_moves.begin(), it);
+        auto it = std::find(sorted_moves, moves_end, tt_move);
+        if (it != moves_end) {
+            std::iter_swap(sorted_moves, it);
         }
     }
 
@@ -364,30 +440,40 @@ int negascout(int depth, int alpha, int beta, char player) {
     if (depth >= 0 && depth < MAX_KILLER_DEPTH) {
         for (auto& killer : g_killers[depth]) {
             if (killer.first < 0 || killer == tt_move) continue;
-            auto it = std::find(sorted_moves.begin() + ordered_upto, sorted_moves.end(), killer);
-            if (it != sorted_moves.end()) {
-                std::iter_swap(sorted_moves.begin() + ordered_upto, it);
+            auto it = std::find(sorted_moves + ordered_upto, moves_end, killer);
+            if (it != moves_end) {
+                std::iter_swap(sorted_moves + ordered_upto, it);
                 ordered_upto++;
             }
         }
     }
 
-    // Everything else: stable-sort by history-heuristic score (descending),
-    // falling back to the existing static square-priority order for ties —
-    // a smoother, whole-list-covering signal beyond just the top 2 killers.
-    if (ordered_upto < (int)sorted_moves.size()) {
+    // Everything else: sort by history-heuristic score (descending), falling
+    // back to the existing static square-priority order for ties (insertion
+    // sort is stable) — a smoother, whole-list-covering signal beyond just
+    // the top 2 killers. Insertion sort, not std::stable_sort: n is at most
+    // 64, insertion is faster at this size, and stable_sort allocates a
+    // temporary buffer on every call (one malloc per search node).
+    if (ordered_upto < sorted_count) {
         int player_idx = (player == PLAYER1) ? 0 : 1;
-        std::stable_sort(sorted_moves.begin() + ordered_upto, sorted_moves.end(),
-            [player_idx](const std::pair<int, int>& a, const std::pair<int, int>& b) {
-                return g_history[player_idx][a.first * BOARD_SIZE + a.second]
-                     > g_history[player_idx][b.first * BOARD_SIZE + b.second];
-            });
+        auto key = [player_idx](const std::pair<int, int>& m) {
+            return g_history[player_idx][m.first * BOARD_SIZE + m.second];
+        };
+        for (std::pair<int, int>* i = sorted_moves + ordered_upto + 1; i != moves_end; ++i) {
+            std::pair<int, int> v = *i;
+            std::pair<int, int>* j = i;
+            while (j != sorted_moves + ordered_upto && key(v) > key(*(j - 1))) {
+                *j = *(j - 1);
+                --j;
+            }
+            *j = v;
+        }
     }
 
     std::pair<int, int> best_move_found = sorted_moves[0];
 
     // Iterate through all sorted (valid) moves
-    for (int idx = 0; idx < (int)sorted_moves.size(); idx++) {
+    for (int idx = 0; idx < sorted_count; idx++) {
         int i = sorted_moves[idx].first;
         int j = sorted_moves[idx].second;
 
@@ -421,6 +507,11 @@ int negascout(int depth, int alpha, int beta, char player) {
         }
     }
 
+    // Abort unwind: never let a dead subtree's score into the TT — a stored
+    // bound derived from aborted children is garbage (children returned 0
+    // because of the clock, not because the position scores 0).
+    if (search_aborted) return best_score;
+
     uint8_t bound = (best_score <= orig_alpha) ? BOUND_UPPER
                    : (best_score >= orig_beta)  ? BOUND_LOWER
                    :                              BOUND_EXACT;
@@ -429,9 +520,111 @@ int negascout(int depth, int alpha, int beta, char player) {
     return best_score;
 }
 
-std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
-    node_count = 0;
+// One worker's IDDFS: identical logic to the single-threaded predict_move
+// body (which this function also serves as for nthreads == 1), running on
+// the caller's own board copy (thread_local black_bb/white_bb/current_hash —
+// seeded by the spawner). Results are reported through `out` at completion
+// of each depth; the spawner races workers against each other and picks the
+// best completed iteration available.
+struct SmpResult {
+    std::pair<int, int> move = {-1, -1};
+    int score = std::numeric_limits<int>::min();
+    int depth = 0;
+    uint64_t nodes = 0;
+};
+
+static void smp_worker(char player,
+                       std::chrono::steady_clock::time_point end_time,
+                       uint64_t seed_bb_black, uint64_t seed_bb_white,
+                       uint64_t seed_hash, SmpResult& out) {
+    // Seed this thread's board copy from the spawner's board. For nthreads==1
+    // the spawner passes its own (already-current) values, making these
+    // assignments no-ops.
+    black_bb = seed_bb_black;
+    white_bb = seed_bb_white;
+    current_hash = seed_hash;
     reset_move_ordering_heuristics();
+    // Per-move node count: zero this thread's counter before searching. For
+    // the nthreads==1 path this thread is the persistent main/UI thread, so
+    // without this the reported count would accumulate across every AI move
+    // of the game instead of counting just this turn's search.
+    node_count = 0;
+
+    char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
+
+    // Arm this thread's soft deadline (thread_local; read-only during search).
+    search_deadline = end_time;
+    search_aborted = false;
+
+    std::pair<int, int> sorted_moves[MAX_MOVES];
+    int sorted_count = get_sorted_moves(player, sorted_moves);
+    std::pair<int, int>* moves_end = sorted_moves + sorted_count;
+
+    SmpResult local;
+    int current_depth = 1;
+    int empty_cells = BOARD_SIZE * BOARD_SIZE - __builtin_popcountll(black_bb | white_bb);
+
+    while (std::chrono::steady_clock::now() < end_time && current_depth <= empty_cells) {
+        std::pair<int, int> current_best_move;
+        int current_best_score = std::numeric_limits<int>::min();
+        bool completed_depth = true;
+
+        for (int idx = 0; idx < sorted_count; idx++) {
+            const auto& move = sorted_moves[idx];
+            if (search_aborted || std::chrono::steady_clock::now() >= end_time) {
+                completed_depth = false;
+                break;
+            }
+            MoveUndo undo = make_move_undoable(move.first, move.second, player);
+            // Depth accounting mirrors the single-threaded driver: the root
+            // move is already made, so remaining depth is current_depth - 1
+            // (timed-mode depth == fixed-depth depth; see commit 1e182ad).
+            int score = -negascout(current_depth - 1, std::numeric_limits<int>::min() + 1,
+                                   std::numeric_limits<int>::max(), opponent);
+            unmake_move(undo);
+            // The deadline can fire inside the LAST root move's subtree: the
+            // for loop then ends without revisiting the pre-move check, which
+            // would publish an aborted (garbage-scored) iteration as complete.
+            // Re-check after every child before using its score.
+            if (search_aborted) {
+                completed_depth = false;
+                break;
+            }
+            if (score > current_best_score) {
+                current_best_move = move;
+                current_best_score = score;
+            }
+        }
+
+        if (!completed_depth) break;
+
+        // Publish this depth's completed result. Plain struct write: the
+        // spawner reads these only after joining this thread (or after a
+        // mutex-protected handoff), never mid-flight.
+        local.move = current_best_move;
+        local.score = current_best_score;
+        local.depth = current_depth;
+
+        // Iteration-to-iteration best-move-first ordering (same as the
+        // single-threaded driver).
+        auto it = std::find(sorted_moves, moves_end, current_best_move);
+        if (it != moves_end && it != sorted_moves) {
+            std::iter_swap(sorted_moves, it);
+        }
+        current_depth++;
+    }
+
+    search_deadline = {};
+    search_aborted = false;
+    local.nodes = node_count;
+    out = local;
+}
+
+std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
+    // Instant paths below (book / forced move) return before any search
+    // runs; zero the counter here so they report 0 nodes for THIS turn
+    // instead of the previous searched turn's count.
+    node_count = 0;
 
     // Opening book probe. Keyed by canonical (symmetry-normalized) position,
     // so this also naturally never fires on an arbitrary puzzle-mode start
@@ -450,87 +643,80 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
         return book_move;
     }
 
-    char opponent = (player == PLAYER1) ? PLAYER2 : PLAYER1;
+    // Forced single move: no search either way.
+    {
+        std::pair<int, int> probe[MAX_MOVES];
+        int probe_count = get_sorted_moves(player, probe);
+        if (probe_count == 1) {
+            out_score = 0;
+            out_depth = 0;
+            return probe[0];
+        }
+    }
+
+    // Resolve the thread count: main.cpp sets search_threads from --threads;
+    // clamp to something sane for the hardware (leave 2 cores for the OS/UI)
+    // and to the compile-time cap.
+    int nthreads = search_threads;
+    {
+        unsigned hw = std::thread::hardware_concurrency();
+        if (hw >= 4) nthreads = std::min(nthreads, (int)hw - 2);
+        nthreads = std::clamp(nthreads, 1, MAX_SEARCH_THREADS);
+    }
+
     auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(time_limit);
 
-    // Get the sorted valid moves for the current player
-    std::vector<std::pair<int, int>> sorted_moves = get_sorted_moves(player);
-
-    // If there's only one valid move, return it immediately (no search).
-    // Deliberately report score 0: a static evaluation would be misleading
-    // when no search was performed for this forced move.
-    if (sorted_moves.size() == 1) {
-        out_score = 0;
-        out_depth = 0;
-        return sorted_moves[0];
+    if (nthreads == 1) {
+        // Historical path: search on this thread, board already in place.
+        SmpResult r;
+        smp_worker(player, end_time, black_bb, white_bb, current_hash, r);
+        node_count = 0; // this thread's own count; single-threaded semantics
+        // (smp_worker already reset/accumulated into this thread's
+        // thread_local node_count; report the total through out params below.)
+        uint64_t total = r.nodes;
+        node_count = total; // expose via the same global the CLI prints
+        out_score = r.score;
+        out_depth = r.depth;
+        return r.move;
     }
 
-    // Initialize the best move, best score, and current depth
-    std::pair<int, int> best_move;
-    int best_score = std::numeric_limits<int>::min();
-    int current_depth = 1;
-    int best_depth = 0;
+    // Lazy SMP: nthreads independent IDDFS workers over one shared TT.
+    // Board copies are seeded from the main thread's board BEFORE spawning
+    // (thread_local assignment below runs in the worker, reading seeds
+    // captured here). Each worker races the others; the shared TT makes them
+    // collaborate — a subtree one worker finishes may be a TT hit for
+    // another. Results are collected under a mutex as workers complete each
+    // depth; the best completed depth at deadline wins.
+    std::vector<std::thread> threads;
+    std::vector<SmpResult> results(nthreads);
+    std::mutex results_mutex;
+    uint64_t seed_black = black_bb, seed_white = white_bb, seed_hash = current_hash;
 
-    // Get the number of empty cells on the board
-    int empty_cells = BOARD_SIZE * BOARD_SIZE - __builtin_popcountll(black_bb | white_bb);
-
-    // While time is left and depth is less than the number of empty cells
-    while (std::chrono::steady_clock::now() < end_time && current_depth <= empty_cells) {
-        // Initialize the current best move and score
-        std::pair<int, int> current_best_move;
-        int current_best_score = std::numeric_limits<int>::min();
-
-        // Initialize a flag to check if all moves were explored at current depth
-        bool completed_depth = true;
-
-        // Try each move at the current depth
-        for (const auto& move : sorted_moves) {
-            // Check if we've run out of time before starting a new move
-            if (std::chrono::steady_clock::now() >= end_time) {
-                // If we have, then we did not complete the depth
-                completed_depth = false;
-                break;
-            }
-
-            // Simulate the move, keeping an undo record instead of copying the board
-            MoveUndo undo = make_move_undoable(move.first, move.second, player);
-
-            // Call negascout to predict the score
-            int score = -negascout(current_depth, std::numeric_limits<int>::min() + 1, std::numeric_limits<int>::max(), opponent);
-
-            // Undo the move
-            unmake_move(undo);
-
-            // Update the current best move and score
-            if (score > current_best_score) {
-                current_best_move = move;
-                current_best_score = score;
-            }
-        }
-
-        // Update the best move and score if we explored all moves at this depth
-        if (completed_depth) {
-            best_depth = current_depth;
-            best_score = current_best_score;
-            best_move = current_best_move;
-
-            // Try this depth's best move first at the next (deeper) iteration —
-            // a strong ordering guess that also gets a real TT-move hint once
-            // negascout re-visits the root position at the new depth.
-            auto it = std::find(sorted_moves.begin(), sorted_moves.end(), current_best_move);
-            if (it != sorted_moves.end() && it != sorted_moves.begin()) {
-                std::iter_swap(sorted_moves.begin(), it);
-            }
-        } else {
-            // If we didn't complete the depth, we ran out of time
-            break;
-        }
-
-        // Increment depth for next iteration
-        current_depth++;
+    for (int t = 0; t < nthreads; t++) {
+        threads.emplace_back([&, t]() {
+            SmpResult local;
+            smp_worker(player, end_time, seed_black, seed_white, seed_hash, local);
+            std::lock_guard<std::mutex> lock(results_mutex);
+            results[t] = local;
+        });
     }
+    for (auto& th : threads) th.join();
 
-    out_score = best_score;
-    out_depth = best_depth;
-    return best_move;
-} 
+    // Pick the deepest completed iteration across workers (all workers ran
+    // the same IDDFS schedule, so depth is comparable; among equal depths
+    // any worker's result is valid — they differ only in ordering luck).
+    const SmpResult* best = nullptr;
+    uint64_t total_nodes = 0;
+    for (const auto& r : results) {
+        total_nodes += r.nodes;
+        if (!best || r.depth > best->depth ||
+            (r.depth == best->depth && r.score > best->score)) {
+            best = &r;
+        }
+    }
+    node_count = total_nodes;
+    out_score = best->score;
+    out_depth = best->depth;
+    return best->move;
+
+}

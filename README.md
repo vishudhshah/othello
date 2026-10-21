@@ -60,15 +60,18 @@ The AI then plays out the game from the given position.
 ## Notes on 'AI'
 - **Board representation**: bitboards — the board is two 64-bit integers (one bit per square, one integer per color) instead of a grid. This makes move generation, flipping, and scoring fast bitwise operations instead of cell-by-cell loops.
 - **Opening book**: the first several moves of a game are often looked up instantly instead of searched, drawn from real Othello opening theory — see [Opening book](#opening-book) below.
-- **Search**: Iterative deepening (IDDFS) with a time limit.
+- **Search**: Iterative deepening (IDDFS) with a time limit. The deadline is enforced *inside* the search (once per node), not just between root moves, so one deep subtree can't silently overrun the budget — timed runs finish within ~1–2% of the requested time.
+- **Parallel search (Lazy SMP)**: the AI searches with **4 independent iterative-deepening workers by default**, racing each other over one shared transposition table — a subtree one worker finishes can be another worker's TT hit, so the workers collaborate. Each TT entry (key + payload, 16 bytes) travels as a single atomic unit, so a reader can never see a key from one position with another's score; whether that atomic is *lock-free* is platform-dependent (it is on Apple Silicon and x86-64 with `cmpxchg16b`, otherwise the standard library falls back to an internal lock, and the Makefile links libatomic where the platform needs it). The deepest completed depth wins. Set `--threads N` to change the count (capped at 16 and at `cores − 2`); `--threads 1` runs the historical single-threaded search. Fixed-depth `--search` is always single-threaded so its results stay deterministic. Measured on an Apple M4 (10 cores), midgame position: at a 3s time limit the 4-thread search reaches depth 12 where 1 thread stays at depth 11; at 1s both reach depth 11, the 4-thread search having searched ~4× as many nodes (note this is aggregate across workers — some work is duplicated between them, so it is not a pure 4× speedup).
+- **Honest depth accounting**: the depth reported for a timed search uses the same convention as fixed-depth mode ("depth D" counts the root move as ply 1, i.e. D−1 plies are searched below the root move), so depth numbers in the CSV/log exports are directly comparable across both paths.
 - **Algorithm**: NegaScout (Principal Variation Search) with alpha-beta pruning, sped up by a **transposition table** — a cache of positions already searched, keyed by a **Zobrist hash** (a fingerprint of the board that updates incrementally as moves are made, rather than being recomputed from scratch). This lets the AI skip re-searching positions it's already evaluated (which happens often — different move orders can reach the same board) and search noticeably deeper in the same time limit.
 - **Move ordering**: Moves are tried in priority order (corners → edges → inner cells → X-squares) to improve pruning efficiency, with a further boost from replaying whichever move the transposition table says worked best last time.
 - **Evaluation components**:
   - *Material*: positional weights per square
   - *Mobility*: relative number of legal moves available
   - *Stability*: discs that can never be flipped (corners, filled edges, enclosed interior)
-  - *Frontier*: discs adjacent to empty squares (fewer is better)
+  - *Frontier*: discs adjacent to empty squares (fewer is better) — evaluated with pure bitboard shifts/popcounts rather than a per-cell neighbor scan
 - **Dynamic danger correction**: static penalties for X/C-squares are lifted when the adjacent corner is already owned, since those squares are no longer a liability.
+- **Time-budget integrity**: searches abort cleanly at the deadline and only report a depth that fully completed — an iteration cut off mid-way by the clock is discarded in favor of the last completed depth's result. Input positions where no legal move exists error out gracefully instead of crashing.
 
 ---
 
@@ -113,11 +116,12 @@ Passing certain flags on the command line skips the ncurses screen entirely and 
 ./main --selfplay --time 2                     # play a full AI-vs-AI game, print every move
 ./main --search --time 5                       # get the AI's move for the current position
 ./main --search --fen "8/8/8/3WB3/3BW3/8/8/8" --player B   # ...from a specific position
+./main --search --time 3 --threads 1           # ...single-threaded (default is 4 Lazy SMP workers)
 ./main --perft 6                                # count reachable positions N moves out (move-generator correctness check)
 ./main --book-dump openings.txt                 # print every entry the opening book parses to (see above)
 ./main --opening-name --64 "<64charboard>" --player B   # look up the opening name/category for an arbitrary position
 ```
 
-Common options across these: `--fen <string>` / `--64 <string>` load a starting position (same formats as Puzzle Mode above; defaults to the standard starting position if neither is given), `--player B|W` sets whose turn it is, `--time <seconds>` sets the AI's thinking time. A couple of flags exist purely for verifying the engine is behaving correctly and aren't needed day-to-day: `--verify-zobrist` (with `--perft`) and `--no-tt` / `--search --fixed-depth <n>` (with `--search`).
+Common options across these: `--fen <string>` / `--64 <string>` load a starting position (same formats as Puzzle Mode above; defaults to the standard starting position if neither is given), `--player B|W` sets whose turn it is, `--time <seconds>` sets the AI's thinking time (integer, minimum 1), and `--threads <n>` sets the number of Lazy SMP search workers for `--search`/`--selfplay` (default 4; `1` restores the single-threaded search; capped at 16 and at `cores − 2`). A couple of flags exist purely for verifying the engine is behaving correctly and aren't needed day-to-day: `--verify-zobrist` (with `--perft`) and `--no-tt` / `--search --fixed-depth <n>` (with `--search`; fixed-depth search is always single-threaded and ignores `--threads`).
 
-Running `./main` with none of these flags starts the normal interactive game exactly as before — nothing about regular play has changed.
+Running `./main` with none of these flags starts the normal interactive game exactly as before — with one exception from this branch: the AI in every mode now searches with the default 4 Lazy SMP workers (same speedup as headless mode), so it reaches deeper in its time budget.
