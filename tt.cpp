@@ -62,15 +62,16 @@ static inline void unpack_payload(uint64_t p, int& score, int& depth,
     move = {r, c};
 }
 
-const TTEntry* tt_probe(uint64_t key) {
-    if (!tt_enabled) return nullptr;
+bool tt_probe(uint64_t key, TTEntry* out) {
+    if (!tt_enabled) return false;
     Slot& s = slots[key & TT_MASK];
-    // Snapshot the whole entry (key + payload) in one atomic load. The
-    // snapshot is a value copy: no concurrent tt_store can change what the
-    // caller later reads through tt_unpack.
+    // Snapshot the whole entry (key + payload) in one atomic load into the
+    // caller's storage — a value copy, no heap allocation. No concurrent
+    // tt_store can change what the caller reads from *out afterward.
     TTEntry snapshot = s.entry.load(std::memory_order_acquire);
-    if (snapshot.key != key) return nullptr;
-    return new (std::nothrow) TTEntry(snapshot);
+    if (snapshot.key != key) return false;
+    *out = snapshot;
+    return true;
 }
 
 void tt_unpack(const TTEntry* e, int& score, int& depth, uint8_t& bound,

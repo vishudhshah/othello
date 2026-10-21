@@ -38,15 +38,17 @@ void tt_clear();
 // TT-on vs TT-off comparison of the same search.
 void tt_set_enabled(bool enabled);
 
-// Returns nullptr if the slot is empty or holds a different position
-// (hash-index collision) — callers must not assume a non-null result means
-// an exact match at the requested depth, only that it's this position.
-// The returned handle owns a snapshot: its payload is immutable regardless
-// of concurrent tt_store activity.
-const TTEntry* tt_probe(uint64_t key);
+// Probes the slot for `key`. On hit, snapshots the whole entry (key +
+// payload) in ONE atomic load and copies it into `*out` — a value copy, so
+// no concurrent tt_store can change what the caller reads afterward. The
+// search's only caller passes a stack TTEntry: zero heap allocation on the
+// probe path. Returns true if the slot held this position (hash-index
+// collision = miss), false otherwise.
+bool tt_probe(uint64_t key, TTEntry* out);
 
-// Unpacks a successfully probed entry. Call only with a non-null tt_probe
-// result. Returns the stored score, depth, bound, and move via out-params.
+// Unpacks a successfully probed entry. Call only after a true tt_probe
+// result, on the same out-entry. Returns the stored score, depth, bound,
+// and move via out-params.
 void tt_unpack(const TTEntry* e, int& score, int& depth, uint8_t& bound,
                std::pair<int, int>& move);
 

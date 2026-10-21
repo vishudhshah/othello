@@ -405,11 +405,10 @@ int negascout(int depth, int alpha, int beta, char player) {
     uint64_t tt_key = current_hash ^ (player == PLAYER2 ? ZOBRIST_TURN : 0);
     std::pair<int, int> tt_move = {-1, -1};
 
-    const TTEntry* entry = tt_probe(tt_key);
-    if (entry) {
+    TTEntry entry;
+    if (tt_probe(tt_key, &entry)) {
         int e_score, e_depth; uint8_t e_bound;
-        tt_unpack(entry, e_score, e_depth, e_bound, tt_move);
-        delete entry; // probe result is a heap snapshot; unpack copies it out
+        tt_unpack(&entry, e_score, e_depth, e_bound, tt_move);
         if (e_depth >= depth) {
             if (e_bound == BOUND_EXACT) {
                 return e_score;
