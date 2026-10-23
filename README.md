@@ -5,13 +5,15 @@
 Othello/Reversi game coded in C++, with an ncurses TUI. Can play against an 'AI'.
 
 - Since you're here, I assume you already know how to play... If not, [here's a link](https://en.wikipedia.org/wiki/Reversi#Rules).
-- To play the game,
-  1. Run the `main` binary file and follow the prompts, or
-  2. Download the source code and run `make` to compile, then run the `main` binary file.
+- To play the game, clone the repo, then build and run:
+  ```bash
+  make
+  ./main
+  ```
 
 **Dependencies**: building from source requires ncurses (wide-char build). On macOS: `brew install ncurses`. The Makefile picks it up automatically via `brew --prefix ncurses`.
 
-**Disclaimer**: If you are on Windows then you may need to compile the code yourself; the provided Makefile and binary executable was meant for Unix-based systems.
+**Disclaimer**: the game targets Unix-based systems (macOS/Linux). On Windows you'll need a POSIX-compatible environment like WSL to compile and run it.
 
 ---
 
