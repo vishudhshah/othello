@@ -89,6 +89,8 @@ Tiger|f5 d6 c3 d3 c4
 
 At every program start, the game reads this file, replays each sequence, and builds two things in memory from it: a move-suggestion table (every move of every line, not just the final position) and a name lookup (the name of the position at the end of each named line). There's no separate compiled/generated file — edit `openings.txt` directly to add, fix, or extend an opening, and it takes effect the next time you run the game. No regeneration step, nothing to keep in sync.
 
+Note: the path is resolved relative to the current working directory (not the binary's location), so run the game from the repo root — or pass an absolute path via `--book-dump` — for the book to be found.
+
 **A few things make the book smarter than a plain move list**:
 - It's keyed by the *position on the board*, not the sequence of moves that reached it — so different move orders that land on the same board share one book entry.
 - It's keyed by *canonical* position — the board's 8 rotations/reflections (spin it 90°, flip it, etc.) are recognized as the same entry, so `openings.txt` only needs one orientation of each opening; the other 3 equivalent first moves and any mirror-image continuation are covered automatically.
