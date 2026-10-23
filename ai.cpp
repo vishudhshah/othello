@@ -620,7 +620,7 @@ static void smp_worker(char player,
     out = local;
 }
 
-std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth) {
+std::pair<int, int> predict_move(char player, double time_limit, int& out_score, int& out_depth) {
     // Instant paths below (book / forced move) return before any search
     // runs; zero the counter here so they report 0 nodes for THIS turn
     // instead of the previous searched turn's count.
@@ -664,7 +664,12 @@ std::pair<int, int> predict_move(char player, int time_limit, int& out_score, in
         nthreads = std::clamp(nthreads, 1, MAX_SEARCH_THREADS);
     }
 
-    auto end_time = std::chrono::steady_clock::now() + std::chrono::seconds(time_limit);
+    // Sub-second limits are honored: the double seconds are converted to a
+    // steady_clock duration (truncated to the clock's nanosecond tick —
+    // irrelevant at these magnitudes).
+    auto end_time = std::chrono::steady_clock::now() +
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+            std::chrono::duration<double>(time_limit));
 
     if (nthreads == 1) {
         // Historical path: search on this thread, board already in place.

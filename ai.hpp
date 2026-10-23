@@ -48,4 +48,4 @@ int evaluate_board(char player, int phase);
 // runs once per search node.
 int get_sorted_moves(char player, std::pair<int, int>* out);
 int negascout(int depth, int alpha, int beta, char player);
-std::pair<int, int> predict_move(char player, int time_limit, int& out_score, int& out_depth);
+std::pair<int, int> predict_move(char player, double time_limit, int& out_score, int& out_depth);

@@ -1,6 +1,30 @@
 #include "input.hpp"
+#include <cctype>
 #include <iostream>
 #include <format>
+
+bool parse_time_limit(const std::string& s, double& out) {
+    if (s.empty()) return false;
+    bool seen_dot = false;
+    for (char c : s) {
+        if (c == '.') {
+            if (seen_dot) return false;
+            seen_dot = true;
+        } else if (!std::isdigit((unsigned char)c)) {
+            return false;
+        }
+    }
+    try {
+        out = std::stod(s);
+    } catch (...) {
+        return false;
+    }
+    if (out == 0.0) {
+        out = DEFAULT_TIME_LIMIT;
+        return true;
+    }
+    return out >= MIN_TIME_LIMIT;
+}
 
 int get_search_depth() {
     int depth;

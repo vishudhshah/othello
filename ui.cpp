@@ -447,14 +447,18 @@ int get_game_mode() {
     return idx + 1;
 }
 
-int get_time_limit(const std::string& label) {
-    std::string prompt = std::format("Enter time limit for {} in seconds (0 = default {}s):", label, DEFAULT_TIME_LIMIT);
+double get_time_limit(const std::string& label) {
+    std::string prompt = std::format(
+        "Enter time limit for {} in seconds (decimals ok, min {}s; 0 = default {}s):",
+        label, MIN_TIME_LIMIT, DEFAULT_TIME_LIMIT);
     std::string s = run_text_entry(prompt, [](const std::string& s) {
-        for (char c : s) if (!std::isdigit((unsigned char)c)) return false;
-        return true;
-    }, "Please enter a non-negative whole number.");
-    int v = std::stoi(s);
-    return v == 0 ? DEFAULT_TIME_LIMIT : v;
+        double v;
+        return parse_time_limit(s, v);
+    }, std::format("Please enter a decimal number of seconds (min {}s); 0 = default {}s.",
+                   MIN_TIME_LIMIT, DEFAULT_TIME_LIMIT));
+    double v = 0;
+    parse_time_limit(s, v); // already validated by run_text_entry
+    return v;
 }
 
 char get_disk_color() {

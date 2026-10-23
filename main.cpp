@@ -141,13 +141,15 @@ static int run_headless(int argc, char** argv) {
         if (!get_int("--threads", "4", nt)) return 1;
         search_threads = nt;
     }
-    // Time is parsed as integer seconds, so a fractional value like 0.9
-    // truncates to 0 and predict_move's IDDFS loop never runs (it returned
-    // SCORE -2147483648 / DEPTH 0). Reject anything below 1s up front.
-    auto get_time_limit = [&](int& out) -> bool {
-        if (!get_int("--time", to_string(DEFAULT_TIME_LIMIT), out)) return false;
-        if (out < 1) {
-            printf("ERROR --time must be at least 1 second (got %d)\n", out);
+    // Time is a decimal number of seconds (min 0.1s) parsed by the shared
+    // parse_time_limit(), so the CLI and the TUI accept exactly the same
+    // values. This replaces the old integer-only parse whose truncation
+    // turned a value like 0.9 into a 0s budget (IDDFS never ran: it
+    // returned SCORE -2147483648 / DEPTH 0) — hence the old hard floor of
+    // 1s, now a 0.1s floor enforced inside parse_time_limit.
+    auto get_time_limit = [&](double& out) -> bool {
+        if (!parse_time_limit(get_val("--time", std::format("{}", DEFAULT_TIME_LIMIT)), out)) {
+            printf("ERROR --time must be a decimal number of seconds, minimum %gs (0 = default %gs)\n", MIN_TIME_LIMIT, DEFAULT_TIME_LIMIT);
             return false;
         }
         return true;
@@ -192,7 +194,7 @@ static int run_headless(int argc, char** argv) {
     }
 
     if (has_flag("--selfplay")) {
-        int time_limit;
+        double time_limit;
         if (!get_time_limit(time_limit)) return 1;
         if (!load_headless_position(get_val("--fen"), get_val("--64"))) return 1;
         string pl = get_val("--player", "B");
@@ -254,7 +256,7 @@ static int run_headless(int argc, char** argv) {
             return 0;
         }
 
-        int time_limit;
+        double time_limit;
         if (!get_time_limit(time_limit)) return 1;
         int score, out_depth;
         pair<int, int> mv = predict_move(player, time_limit, score, out_depth);
@@ -294,8 +296,8 @@ int main(int argc, char** argv) {
 
         pair<int, int> user_input;
         int row, col;
-        int time_limit_b = DEFAULT_TIME_LIMIT;
-        int time_limit_w = DEFAULT_TIME_LIMIT;
+        double time_limit_b = DEFAULT_TIME_LIMIT;
+        double time_limit_w = DEFAULT_TIME_LIMIT;
 
         char player_color; // Player's disk color in Player vs AI mode
         string start_pos;  // Starting position string in puzzle mode
@@ -447,7 +449,7 @@ int main(int argc, char** argv) {
                 log_move(format("Move {}: {} played {}{}.", move_number, player_name(current_player), (char)('A' + col), (char)('1' + row)));
             } else {
                 // AI's turn
-                int time_limit = (current_player == PLAYER1) ? time_limit_b : time_limit_w;
+                double time_limit = (current_player == PLAYER1) ? time_limit_b : time_limit_w;
                 // Discard any clicks/keys queued up before the AI starts "thinking" (e.g. leftover
                 // from the previous turn), then again right after it moves, so nothing typed or
                 // clicked during the AI's turn gets silently played as the human's next move.

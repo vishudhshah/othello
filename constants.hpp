@@ -9,7 +9,8 @@ const char VALID = '_';
 const char PLAYER1 = 'B';
 const char PLAYER2 = 'W';
 const int DEFAULT_DEPTH = 5;
-const int DEFAULT_TIME_LIMIT = 5;
+const double DEFAULT_TIME_LIMIT = 1.0;
+const double MIN_TIME_LIMIT = 0.1;
 
 // Board state: one bit per square (square = row*BOARD_SIZE + col, bit 0 =
 // row 0/col 0), set in black_bb/white_bb according to which player occupies

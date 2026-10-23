@@ -156,7 +156,7 @@ std::pair<int, int> calculate_scores() {
     return std::make_pair(__builtin_popcountll(black_bb), __builtin_popcountll(white_bb));
 }
 
-void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, const std::vector<uint64_t>& ai_nodes, const std::vector<std::string>& openings, int game_mode, char player_color, int time_limit_b, int time_limit_w, const std::string& start_pos, char resigned_by) {
+void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, const std::vector<uint64_t>& ai_nodes, const std::vector<std::string>& openings, int game_mode, char player_color, double time_limit_b, double time_limit_w, const std::string& start_pos, char resigned_by) {
     // Build timestamped base filename inside logs/ folder
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
@@ -216,8 +216,10 @@ void export_game(const std::vector<std::pair<char, std::string>>& moves, const s
     std::string player_color_str = (player_color != '\0') ? player_name(player_color) : "";
     // In PvE (mode 2), time_limit_b/w are copies of the same single value and only the
     // AI's side actually uses it — blank the human's side so it doesn't look meaningful.
-    std::string time_limit_b_str = (game_mode == 2 && player_color == PLAYER1) ? "" : std::to_string(time_limit_b);
-    std::string time_limit_w_str = (game_mode == 2 && player_color == PLAYER2) ? "" : std::to_string(time_limit_w);
+    // std::format("{}", double) gives the shortest representation ("1",
+    // "1.5", "0.1") — std::to_string would pad to 6 decimals in the CSV.
+    std::string time_limit_b_str = (game_mode == 2 && player_color == PLAYER1) ? "" : std::format("{}", time_limit_b);
+    std::string time_limit_w_str = (game_mode == 2 && player_color == PLAYER2) ? "" : std::format("{}", time_limit_w);
     std::ofstream csv(base + ".csv");
     csv << "move_number,score,depth,nodes,opening,date,game_mode,player_color,time_limit_b,time_limit_w\n";
     for (int i = 0; i < (int)moves.size(); i++) {
