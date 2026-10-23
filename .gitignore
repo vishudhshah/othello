@@ -2,9 +2,7 @@
 *.dSYM
 .DS_Store
 __pycache__
-build
-CLAUDE.md
+build/
+AGENTS.md
 .git
 logs
-games
-main
