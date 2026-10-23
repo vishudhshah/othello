@@ -1,6 +1,7 @@
 #include "book.hpp"
 #include "bitboard.hpp"
 #include "constants.hpp"
+#include <bit>
 #include <vector>
 #include <algorithm>
 #include <random>
@@ -35,7 +36,7 @@ void book_add(uint64_t black_bb, uint64_t white_bb, char player, int row, int co
     Canonical c = bb_canonicalize(black_bb, white_bb);
     uint64_t move_bit = 1ULL << (row * BOARD_SIZE + col);
     uint64_t canon_move_bit = bb_apply_transform(move_bit, c.transform);
-    int canon_sq = __builtin_ctzll(canon_move_bit);
+    int canon_sq = std::countr_zero(canon_move_bit);
 
     BookRecord rec;
     rec.black = c.black;
@@ -87,7 +88,7 @@ bool book_probe(uint64_t black_bb, uint64_t white_bb, char player, std::pair<int
     uint64_t canon_move_bit = 1ULL << (rec.move_row * BOARD_SIZE + rec.move_col);
     int inv_t = bb_inverse_transform(c.transform);
     uint64_t actual_move_bit = bb_apply_transform(canon_move_bit, inv_t);
-    int actual_sq = __builtin_ctzll(actual_move_bit);
+    int actual_sq = std::countr_zero(actual_move_bit);
     out_move = {actual_sq / BOARD_SIZE, actual_sq % BOARD_SIZE};
     out_score = rec.score;
     return true;
@@ -97,7 +98,7 @@ bool book_has_move(uint64_t black_bb, uint64_t white_bb, char player, int row, i
     Canonical c = bb_canonicalize(black_bb, white_bb);
     uint64_t move_bit = 1ULL << (row * BOARD_SIZE + col);
     uint64_t canon_move_bit = bb_apply_transform(move_bit, c.transform);
-    int canon_sq = __builtin_ctzll(canon_move_bit);
+    int canon_sq = std::countr_zero(canon_move_bit);
     int8_t want_row = (int8_t)(canon_sq / BOARD_SIZE);
     int8_t want_col = (int8_t)(canon_sq % BOARD_SIZE);
 

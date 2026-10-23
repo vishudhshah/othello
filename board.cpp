@@ -1,6 +1,7 @@
 #include "board.hpp"
 #include "zobrist.hpp"
 #include "bitboard.hpp"
+#include <bit>
 #include <format>
 #include <limits>
 #include <fstream>
@@ -101,7 +102,7 @@ MoveUndo make_move_undoable(int row, int col, char player) {
     current_hash ^= ZOBRIST_TABLE[player_idx][row * BOARD_SIZE + col];
     uint64_t fb = flip_bb;
     while (fb) {
-        int sq = __builtin_ctzll(fb);
+        int sq = std::countr_zero(fb);
         current_hash ^= ZOBRIST_TABLE[opponent_idx][sq];
         current_hash ^= ZOBRIST_TABLE[player_idx][sq];
         fb &= fb - 1;
@@ -127,7 +128,7 @@ void unmake_move(const MoveUndo& undo) {
     current_hash ^= ZOBRIST_TABLE[player_idx][undo.row * BOARD_SIZE + undo.col];
     uint64_t fb = undo.flip_bb;
     while (fb) {
-        int sq = __builtin_ctzll(fb);
+        int sq = std::countr_zero(fb);
         current_hash ^= ZOBRIST_TABLE[opponent_idx][sq];
         current_hash ^= ZOBRIST_TABLE[player_idx][sq];
         fb &= fb - 1;
@@ -153,7 +154,7 @@ bool turn_skip(char player) {
 }
 
 std::pair<int, int> calculate_scores() {
-    return std::make_pair(__builtin_popcountll(black_bb), __builtin_popcountll(white_bb));
+    return std::make_pair(std::popcount(black_bb), std::popcount(white_bb));
 }
 
 void export_game(const std::vector<std::pair<char, std::string>>& moves, const std::vector<int>& ai_scores, const std::vector<int>& ai_depths, const std::vector<uint64_t>& ai_nodes, const std::vector<std::string>& openings, int game_mode, char player_color, double time_limit_b, double time_limit_w, const std::string& start_pos, char resigned_by) {

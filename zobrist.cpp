@@ -1,4 +1,5 @@
 #include "zobrist.hpp"
+#include <bit>
 #include <random>
 
 uint64_t ZOBRIST_TABLE[2][BOARD_SIZE * BOARD_SIZE];
@@ -18,8 +19,8 @@ void init_zobrist_table() {
 uint64_t compute_hash(uint64_t black_bb, uint64_t white_bb) {
     uint64_t h = 0;
     uint64_t bb = black_bb;
-    while (bb) { int sq = __builtin_ctzll(bb); h ^= ZOBRIST_TABLE[0][sq]; bb &= bb - 1; }
+    while (bb) { int sq = std::countr_zero(bb); h ^= ZOBRIST_TABLE[0][sq]; bb &= bb - 1; }
     bb = white_bb;
-    while (bb) { int sq = __builtin_ctzll(bb); h ^= ZOBRIST_TABLE[1][sq]; bb &= bb - 1; }
+    while (bb) { int sq = std::countr_zero(bb); h ^= ZOBRIST_TABLE[1][sq]; bb &= bb - 1; }
     return h;
 }

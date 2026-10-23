@@ -4,6 +4,7 @@
 #include "tt.hpp"
 #include "bitboard.hpp"
 #include "book.hpp"
+#include <bit>
 #include <limits>
 #include <algorithm>
 #include <thread>
@@ -78,7 +79,7 @@ static void record_cutoff(char player, int depth, int row, int col) {
 }
 
 int game_phase() {
-    int total_discs = __builtin_popcountll(black_bb | white_bb);
+    int total_discs = std::popcount(black_bb | white_bb);
 
     // Determine the game phase based on the total number of discs
     switch (total_discs) {
@@ -154,7 +155,7 @@ static std::pair<uint64_t, uint64_t> stable_discs_both() {
 
 static std::pair<int,int> count_stable_both() {
     auto [black, white] = stable_discs_both();
-    return {__builtin_popcountll(black), __builtin_popcountll(white)};
+    return {std::popcount(black), std::popcount(white)};
 }
 
 // Returns a correction to position-weight score for danger squares (X/C-squares)
@@ -200,7 +201,7 @@ static int count_frontier_discs(char player) {
     adjacent |= (empty & NOT_A) << 7;   // up-right
     adjacent |= (empty & NOT_H) << 9;   // up-left
     uint64_t discs = (player == PLAYER1) ? black_bb : white_bb;
-    return __builtin_popcountll(discs & adjacent);
+    return std::popcount(discs & adjacent);
 }
 
 int evaluate_board(char player, int phase) {
@@ -208,8 +209,8 @@ int evaluate_board(char player, int phase) {
 
     // Phase 4: raw disc count only
     if (phase == 4) {
-        int p1 = __builtin_popcountll(black_bb);
-        int p2 = __builtin_popcountll(white_bb);
+        int p1 = std::popcount(black_bb);
+        int p2 = std::popcount(white_bb);
         return (player == PLAYER1) ? p1 - p2 : p2 - p1;
     }
 
@@ -220,8 +221,8 @@ int evaluate_board(char player, int phase) {
     // move mask up to 128 times over).
     uint64_t player_bb = (player == PLAYER1) ? black_bb : white_bb;
     uint64_t opp_bb = (player == PLAYER1) ? white_bb : black_bb;
-    int player_moves = __builtin_popcountll(bb_get_moves(player_bb, opp_bb));
-    int opponent_moves = __builtin_popcountll(bb_get_moves(opp_bb, player_bb));
+    int player_moves = std::popcount(bb_get_moves(player_bb, opp_bb));
+    int opponent_moves = std::popcount(bb_get_moves(opp_bb, player_bb));
 
     // Position weights: instead of scanning all 64 cells, popcount each
     // disc color's bitboard against a precomputed mask per distinct weight
@@ -257,8 +258,8 @@ int evaluate_board(char player, int phase) {
         }();
         const auto& masks = (phase <= 2) ? pos_masks : end_masks;
         for (const auto& [weight, mask] : masks) {
-            player1_pos += weight * __builtin_popcountll(black_bb & mask);
-            player2_pos += weight * __builtin_popcountll(white_bb & mask);
+            player1_pos += weight * std::popcount(black_bb & mask);
+            player2_pos += weight * std::popcount(white_bb & mask);
         }
     }
 
@@ -562,7 +563,7 @@ static void smp_worker(char player,
 
     SmpResult local;
     int current_depth = 1;
-    int empty_cells = BOARD_SIZE * BOARD_SIZE - __builtin_popcountll(black_bb | white_bb);
+    int empty_cells = BOARD_SIZE * BOARD_SIZE - std::popcount(black_bb | white_bb);
 
     while (std::chrono::steady_clock::now() < end_time && current_depth <= empty_cells) {
         std::pair<int, int> current_best_move;

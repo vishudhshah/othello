@@ -1,4 +1,5 @@
 #include "bitboard.hpp"
+#include <bit>
 
 namespace {
 
@@ -62,7 +63,7 @@ uint64_t bb_flip_mask(uint64_t player_bb, uint64_t opp_bb, uint64_t move_bit) {
 std::vector<std::pair<int, int>> bb_to_coords(uint64_t bb) {
     std::vector<std::pair<int, int>> out;
     while (bb) {
-        int sq = __builtin_ctzll(bb);
+        int sq = std::countr_zero(bb);
         out.push_back({sq / 8, sq % 8});
         bb &= bb - 1;
     }
@@ -90,7 +91,7 @@ inline std::pair<int, int> transform_coord(int r, int c, int t) {
 uint64_t bb_apply_transform(uint64_t bb, int t) {
     uint64_t result = 0;
     while (bb) {
-        int sq = __builtin_ctzll(bb);
+        int sq = std::countr_zero(bb);
         bb &= bb - 1;
         auto [nr, nc] = transform_coord(sq / 8, sq % 8, t);
         result |= (1ULL << (nr * 8 + nc));
