@@ -8,17 +8,17 @@ endif()
 
 # Set source files and create target executable
 add_executable(main
-  main.cpp
-  constants.cpp
-  board.cpp
-  ai.cpp
-  input.cpp
-  ui.cpp
-  zobrist.cpp
-  tt.cpp
-  bitboard.cpp
-  book.cpp
-  openings.cpp
+  src/main.cpp
+  src/constants.cpp
+  src/board.cpp
+  src/ai.cpp
+  src/input.cpp
+  src/ui.cpp
+  src/zobrist.cpp
+  src/tt.cpp
+  src/bitboard.cpp
+  src/book.cpp
+  src/openings.cpp
 )
 
 # Set C++ standard and compile options
